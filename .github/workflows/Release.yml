@@ -7,6 +7,8 @@ on:
 jobs:
   release:
     name: Release
+    # The whiskywine release only hosts the runtime the app downloads; it is not an app release
+    if: github.event.release.tag_name != 'whiskywine'
     runs-on: ubuntu-latest
     steps:
       - name: Create Discord Embed

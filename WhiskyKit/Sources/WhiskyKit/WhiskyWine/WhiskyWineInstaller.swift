@@ -47,8 +47,9 @@ public class WhiskyWineInstaller {
     /// URL to the installed `wine` `bin` directory
     public static let binFolder: URL = libraryFolder.appending(path: "Wine").appending(path: "bin")
 
+    /// Assets of the `whiskywine` release, which `scripts/publish-whiskywine.sh` replaces on every runtime update
     private static let distributionURL: URL = {
-        guard let url = URL(string: "https://data.getwhisky.app/Wine/") else {
+        guard let url = URL(string: "https://github.com/iStorry/Whisky/releases/download/whiskywine/") else {
             preconditionFailure("Invalid WhiskyWine distribution URL")
         }
         return url
