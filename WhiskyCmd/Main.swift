@@ -26,7 +26,8 @@ import ArgumentParser
 @main
 struct Whisky: ParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "A CLI interface for Whisky.",
+        commandName: "brandy",
+        abstract: "A command-line interface for Brandy.",
         subcommands: [List.self,
                       Create.self,
                       Add.self,
@@ -148,7 +149,7 @@ extension Whisky {
     }
 
     struct Remove: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Remove an existing bottle from Whisky.",
+        static let configuration = CommandConfiguration(abstract: "Remove an existing bottle from Brandy.",
                                                         discussion: "This will not remove the bottle from disk.")
 
         @Argument var name: String
@@ -168,7 +169,7 @@ extension Whisky {
     }
 
     struct Run: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Run a program with Whisky.")
+        static let configuration = CommandConfiguration(abstract: "Run a program with Brandy.")
 
         @Argument var bottleName: String
         @Argument var path: String
@@ -208,7 +209,7 @@ extension Whisky {
     }
 
     struct Install: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Install WhiskyWine.")
+        static let configuration = CommandConfiguration(abstract: "Install BrandyWine.")
 
         mutating func run() throws {
 
@@ -216,9 +217,9 @@ extension Whisky {
     }
 
     struct Uninstall: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Uninstall WhiskyWine.")
+        static let configuration = CommandConfiguration(abstract: "Uninstall BrandyWine.")
 
-        @Flag(name: [.long, .short], help: "Uninstall WhiskyWine") var whiskyWine = false
+        @Flag(name: [.long, .short], help: "Uninstall BrandyWine") var whiskyWine = false
 
         mutating func run() throws {
 

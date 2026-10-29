@@ -32,7 +32,7 @@ public enum WhiskyWineInstallerError: LocalizedError {
 }
 
 public class WhiskyWineInstaller {
-    /// The Whisky application folder
+    /// The app's folder in Application Support
     public static let applicationFolder = applicationFolder(for: Bundle.whiskyBundleIdentifier)
 
     /// The folder of all the library files
