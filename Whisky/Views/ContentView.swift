@@ -20,6 +20,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WhiskyKit
 import SemanticVersion
+import os
 
 struct ContentView: View {
     @AppStorage("selectedBottleURL") private var selectedBottleURL: URL?
@@ -28,6 +29,7 @@ struct ContentView: View {
 
     @State private var selected: URL?
     @State private var showBottleCreation: Bool = false
+    @State private var showWhiskyWineUpdate: Bool = false
     @State private var bottlesLoaded: Bool = false
     @State private var showBottleSelection: Bool = false
     @State private var newlyCreatedBottleURL: URL?
@@ -77,6 +79,17 @@ struct ContentView: View {
         .sheet(isPresented: $showSetup) {
             SetupView(showSetup: $showSetup, firstTime: false)
         }
+        .sheet(isPresented: $showWhiskyWineUpdate) {
+            SetupView(showSetup: $showWhiskyWineUpdate, firstTime: false, initialPath: [.whiskyWineDownload])
+        }
+        .alert(
+            "create.error.title",
+            isPresented: isShowingBottleCreationFailure,
+            presenting: bottleVM.bottleCreationFailure
+        ) { _ in
+        } message: { failure in
+            Text("create.error.message.\(failure.bottleName).\(failure.error.localizedDescription)")
+        }
         .sheet(item: $openedFileURL) { url in
             FileOpenView(fileURL: url,
                          currentBottle: selected,
@@ -104,28 +117,39 @@ struct ContentView: View {
             if !WhiskyWineInstaller.isWhiskyWineInstalled() {
                 showSetup = true
             }
-            let task = Task.detached {
-                return await WhiskyWineInstaller.shouldUpdateWhiskyWine()
-            }
-            let updateInfo = await task.value
-            if updateInfo.0 {
-                let alert = NSAlert()
-                alert.messageText = String(localized: "update.whiskywine.title")
-                alert.informativeText = String(format: String(localized: "update.whiskywine.description"),
-                                               String(WhiskyWineInstaller.whiskyWineVersion()
-                                                      ?? SemanticVersion(0, 0, 0)),
-                                               String(updateInfo.1))
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: String(localized: "update.whiskywine.update"))
-                alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
+            await offerWhiskyWineUpdate()
+        }
+    }
 
-                let response = alert.runModal()
+    private var isShowingBottleCreationFailure: Binding<Bool> {
+        Binding(
+            get: { bottleVM.bottleCreationFailure != nil },
+            set: { if !$0 { bottleVM.bottleCreationFailure = nil } }
+        )
+    }
 
-                if response == .alertFirstButtonReturn {
-                    WhiskyWineInstaller.uninstall()
-                    showSetup = true
-                }
-            }
+    private func offerWhiskyWineUpdate() async {
+        let remoteVersion: SemanticVersion?
+        do {
+            remoteVersion = try await WhiskyWineInstaller.availableUpdate()
+        } catch {
+            Logger.wineKit.error("Failed to check for a WhiskyWine update: \(error)")
+            return
+        }
+        guard let remoteVersion else { return }
+
+        let alert = NSAlert()
+        alert.messageText = String(localized: "update.whiskywine.title")
+        alert.informativeText = String(format: String(localized: "update.whiskywine.description"),
+                                       String(WhiskyWineInstaller.whiskyWineVersion()
+                                              ?? SemanticVersion(0, 0, 0)),
+                                       String(remoteVersion))
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "update.whiskywine.update"))
+        alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            showWhiskyWineUpdate = true
         }
     }
 

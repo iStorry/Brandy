@@ -27,6 +27,7 @@ struct WhiskyWineDownloadView: View {
     @State private var downloadTask: URLSessionDownloadTask?
     @State private var observation: NSKeyValueObservation?
     @State private var startTime: Date?
+    @State private var failureMessage: String?
     @Binding var tarLocation: URL
     @Binding var path: [SetupStage]
     var body: some View {
@@ -39,61 +40,97 @@ struct WhiskyWineDownloadView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
-                VStack {
-                    ProgressView(value: fractionProgress, total: 1)
-                    HStack {
-                        HStack {
-                            Text(String(format: String(localized: "setup.whiskywine.progress"),
-                                        formatBytes(bytes: completedBytes),
-                                        formatBytes(bytes: totalBytes)))
-                            + Text(String(" "))
-                            + (shouldShowEstimate() ?
-                               Text(String(format: String(localized: "setup.whiskywine.eta"),
-                                           formatRemainingTime(remainingBytes: totalBytes - completedBytes)))
-                               : Text(String()))
-                            Spacer()
-                        }
-                        .font(.subheadline)
-                        .monospacedDigit()
+                if let failureMessage {
+                    SetupFailureView(title: "setup.whiskywine.download.failed", message: failureMessage) {
+                        startDownload()
                     }
+                } else {
+                    progress
                 }
-                .padding(.horizontal)
                 Spacer()
             }
             Spacer()
         }
         .frame(width: 400, height: 200)
         .onAppear {
-            Task {
-                if let url: URL = URL(string: "https://data.getwhisky.app/Wine/Libraries.tar.gz") {
-                    downloadTask = URLSession(configuration: .ephemeral).downloadTask(with: url) { url, _, _ in
-                        Task.detached {
-                            await MainActor.run {
-                                if let url = url {
-                                    tarLocation = url
-                                    proceed()
-                                }
-                            }
-                        }
-                    }
-                    observation = downloadTask?.observe(\.countOfBytesReceived) { task, _ in
-                        Task {
-                            await MainActor.run {
-                                let currentTime = Date()
-                                let elapsedTime = currentTime.timeIntervalSince(startTime ?? currentTime)
-                                if completedBytes > 0 {
-                                    downloadSpeed = Double(completedBytes) / elapsedTime
-                                }
-                                totalBytes = task.countOfBytesExpectedToReceive
-                                completedBytes = task.countOfBytesReceived
-                                fractionProgress = Double(completedBytes) / Double(totalBytes)
-                            }
-                        }
-                    }
-                    startTime = Date()
-                    downloadTask?.resume()
+            startDownload()
+        }
+        .onDisappear {
+            observation?.invalidate()
+            downloadTask?.cancel()
+        }
+    }
+
+    private var progress: some View {
+        VStack {
+            ProgressView(value: fractionProgress, total: 1)
+            HStack {
+                HStack {
+                    Text(String(format: String(localized: "setup.whiskywine.progress"),
+                                formatBytes(bytes: completedBytes),
+                                formatBytes(bytes: totalBytes)))
+                    + Text(String(" "))
+                    + (shouldShowEstimate() ?
+                       Text(String(format: String(localized: "setup.whiskywine.eta"),
+                                   formatRemainingTime(remainingBytes: totalBytes - completedBytes)))
+                       : Text(String()))
+                    Spacer()
+                }
+                .font(.subheadline)
+                .monospacedDigit()
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func startDownload() {
+        failureMessage = nil
+        fractionProgress = 0
+        completedBytes = 0
+        totalBytes = 0
+        downloadSpeed = 0
+
+        let task = URLSession(configuration: .ephemeral)
+            .downloadTask(with: WhiskyWineInstaller.librariesArchiveURL) { location, response, error in
+                let result = Result {
+                    try WhiskyWineInstaller.acceptDownload(at: location, response: response, error: error)
+                }
+                Task { @MainActor in
+                    finishDownload(result)
                 }
             }
+        observation = task.observe(\.countOfBytesReceived) { task, _ in
+            let received = task.countOfBytesReceived
+            let expected = task.countOfBytesExpectedToReceive
+            Task { @MainActor in
+                updateProgress(received: received, expected: expected)
+            }
+        }
+        downloadTask = task
+        startTime = Date()
+        task.resume()
+    }
+
+    private func updateProgress(received: Int64, expected: Int64) {
+        let elapsedTime = Date().timeIntervalSince(startTime ?? Date())
+        if received > 0 && elapsedTime > 0 {
+            downloadSpeed = Double(received) / elapsedTime
+        }
+        completedBytes = received
+        totalBytes = max(expected, 0)
+        fractionProgress = totalBytes > 0 ? Double(completedBytes) / Double(totalBytes) : 0
+    }
+
+    private func finishDownload(_ result: Result<URL, Error>) {
+        observation?.invalidate()
+        switch result {
+        case .success(let archive):
+            tarLocation = archive
+            path.append(.whiskyWineInstall)
+        case .failure(let error as URLError) where error.code == .cancelled:
+            break
+        case .failure(let error):
+            failureMessage = error.localizedDescription
         }
     }
 
@@ -106,7 +143,7 @@ struct WhiskyWineDownloadView: View {
 
     func shouldShowEstimate() -> Bool {
         let elapsedTime = Date().timeIntervalSince(startTime ?? Date())
-        return Int(elapsedTime.rounded()) > 5 && completedBytes != 0
+        return Int(elapsedTime.rounded()) > 5 && completedBytes != 0 && totalBytes > 0 && downloadSpeed > 0
     }
 
     func formatRemainingTime(remainingBytes: Int64) -> String {
@@ -120,9 +157,5 @@ struct WhiskyWineDownloadView: View {
         } else {
             return ""
         }
-    }
-
-    func proceed() {
-        path.append(.whiskyWineInstall)
     }
 }

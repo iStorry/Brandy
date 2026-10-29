@@ -8164,6 +8164,56 @@
         }
       }
     },
+    "create.error.message.%@.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” could not be created. %2$@"
+          }
+        }
+      }
+    },
+    "create.error.prefixNotCreated.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wine did not set up the bottle. Wine output: %@"
+          }
+        }
+      }
+    },
+    "create.error.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't Create Bottle"
+          }
+        }
+      }
+    },
+    "create.error.unsupportedLocation.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wine can't use folders whose names end with a period. Choose a different location than %@."
+          }
+        }
+      }
+    },
+    "create.error.whiskyWineNotInstalled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WhiskyWine is not installed. Install it from Whisky > Setup, then try again."
+          }
+        }
+      }
+    },
     "create.name" : {
       "localizations" : {
         "ar" : {
@@ -17298,6 +17348,16 @@
         }
       }
     },
+    "setup.whiskywine.download.failed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download Failed"
+          }
+        }
+      }
+    },
     "setup.whiskywine.download.subtitle" : {
       "localizations" : {
         "ar" : {
@@ -17702,6 +17762,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在安裝 WhiskyWine"
+          }
+        }
+      }
+    },
+    "setup.whiskywine.install.failed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installation Failed"
           }
         }
       }

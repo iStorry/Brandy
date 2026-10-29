@@ -43,6 +43,9 @@ jobs:
           path: .build/SourcePackages
           key: spm-${{ hashFiles('Whisky.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'WhiskyKit/Package.swift') }}
 
+      - name: Test WhiskyKit
+        run: swift test --package-path WhiskyKit
+
       - name: Build Whisky
         run: xcodebuild build -project Whisky.xcodeproj -scheme Whisky -configuration Release
           -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution

@@ -17,7 +17,25 @@
 //
 
 import Foundation
+import os
 import SemanticVersion
+
+public enum WhiskyWineInstallerError: LocalizedError {
+    case missingResponse
+    case unexpectedStatus(Int)
+    case missingVersionInfo
+
+    public var errorDescription: String? {
+        switch self {
+        case .missingResponse:
+            return "The server did not respond."
+        case .unexpectedStatus(let status):
+            return "The server responded with HTTP \(status)."
+        case .missingVersionInfo:
+            return "The downloaded archive does not contain a WhiskyWine version file."
+        }
+    }
+}
 
 public class WhiskyWineInstaller {
     /// The Whisky application folder
@@ -28,6 +46,19 @@ public class WhiskyWineInstaller {
 
     /// URL to the installed `wine` `bin` directory
     public static let binFolder: URL = libraryFolder.appending(path: "Wine").appending(path: "bin")
+
+    /// Assets of the `whiskywine` release, which `scripts/publish-whiskywine.sh` replaces on every runtime update
+    private static let distributionURL: URL = {
+        guard let url = URL(string: "https://github.com/iStorry/Whisky/releases/download/whiskywine/") else {
+            preconditionFailure("Invalid WhiskyWine distribution URL")
+        }
+        return url
+    }()
+
+    /// The archive holding the `Libraries` folder
+    public static let librariesArchiveURL = distributionURL.appending(path: "Libraries.tar.gz")
+
+    private static let remoteVersionURL = distributionURL.appending(path: "WhiskyWineVersion.plist")
 
     static func applicationFolder(for bundleIdentifier: String) -> URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -42,20 +73,60 @@ public class WhiskyWineInstaller {
         return whiskyWineVersion() != nil
     }
 
-    public static func install(from: URL) {
-        do {
-            if !FileManager.default.fileExists(atPath: applicationFolder.path) {
-                try FileManager.default.createDirectory(at: applicationFolder, withIntermediateDirectories: true)
-            } else {
-                // Recreate it
-                try FileManager.default.removeItem(at: applicationFolder)
-                try FileManager.default.createDirectory(at: applicationFolder, withIntermediateDirectories: true)
-            }
+    /// Validates a finished `URLSessionDownloadTask` and moves its file out of the session's temporary
+    /// location, which is deleted as soon as the completion handler returns
+    public static func acceptDownload(at location: URL?, response: URLResponse?, error: Error?) throws -> URL {
+        if let error {
+            throw error
+        }
+        guard let location, let response = response as? HTTPURLResponse else {
+            throw WhiskyWineInstallerError.missingResponse
+        }
+        guard response.statusCode == 200 else {
+            throw WhiskyWineInstallerError.unexpectedStatus(response.statusCode)
+        }
 
-            try Tar.untar(tarBall: from, toURL: applicationFolder)
-            try FileManager.default.removeItem(at: from)
+        let destination = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension("tar.gz")
+        try FileManager.default.moveItem(at: location, to: destination)
+        return destination
+    }
+
+    /// Installs the archive, replacing the current `Libraries` folder only once the new one is extracted and valid
+    public static func install(from archive: URL) throws {
+        try install(from: archive, into: applicationFolder)
+    }
+
+    static func install(from archive: URL, into applicationFolder: URL) throws {
+        let fileManager = FileManager.default
+        let stagingFolder = applicationFolder.appending(path: ".staging-\(UUID().uuidString)")
+        try fileManager.createDirectory(at: stagingFolder, withIntermediateDirectories: true)
+        defer {
+            removeLeftover(stagingFolder)
+            removeLeftover(archive)
+        }
+
+        try Tar.untar(tarBall: archive, toURL: stagingFolder)
+        let stagedLibraries = libraryFolder(in: stagingFolder)
+        guard whiskyWineVersion(in: stagedLibraries) != nil else {
+            throw WhiskyWineInstallerError.missingVersionInfo
+        }
+
+        let installedLibraries = libraryFolder(in: applicationFolder)
+        if fileManager.fileExists(atPath: installedLibraries.path(percentEncoded: false)) {
+            _ = try fileManager.replaceItemAt(installedLibraries, withItemAt: stagedLibraries)
+        } else {
+            try fileManager.moveItem(at: stagedLibraries, to: installedLibraries)
+        }
+    }
+
+    private static func removeLeftover(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
         } catch {
-            print("Failed to install WhiskyWine: \(error)")
+            Logger.wineKit.error("Failed to remove `\(url.path(percentEncoded: false))`: \(error)")
         }
     }
 
@@ -67,57 +138,37 @@ public class WhiskyWineInstaller {
         }
     }
 
-    public static func shouldUpdateWhiskyWine() async -> (Bool, SemanticVersion) {
-        let versionPlistURL = "https://data.getwhisky.app/Wine/WhiskyWineVersion.plist"
-        let localVersion = whiskyWineVersion()
+    /// The newer WhiskyWine version available for download, or `nil` when the installed one is current
+    public static func availableUpdate() async throws -> SemanticVersion? {
+        guard let localVersion = whiskyWineVersion() else { return nil }
 
-        var remoteVersion: SemanticVersion?
-
-        if let remoteUrl = URL(string: versionPlistURL) {
-            remoteVersion = await withCheckedContinuation { continuation in
-                URLSession(configuration: .ephemeral).dataTask(with: URLRequest(url: remoteUrl)) { data, _, error in
-                    do {
-                        if error == nil, let data = data {
-                            let decoder = PropertyListDecoder()
-                            let remoteInfo = try decoder.decode(WhiskyWineVersion.self, from: data)
-                            let remoteVersion = remoteInfo.version
-
-                            continuation.resume(returning: remoteVersion)
-                            return
-                        }
-                        if let error = error {
-                            print(error)
-                        }
-                    } catch {
-                        print(error)
-                    }
-
-                    continuation.resume(returning: nil)
-                }.resume()
-            }
+        let (data, response) = try await URLSession(configuration: .ephemeral).data(from: remoteVersionURL)
+        guard let response = response as? HTTPURLResponse else {
+            throw WhiskyWineInstallerError.missingResponse
+        }
+        guard response.statusCode == 200 else {
+            throw WhiskyWineInstallerError.unexpectedStatus(response.statusCode)
         }
 
-        if let localVersion = localVersion, let remoteVersion = remoteVersion {
-            if localVersion < remoteVersion {
-                return (true, remoteVersion)
-            }
-        }
-
-        return (false, SemanticVersion(0, 0, 0))
+        let remoteVersion = try PropertyListDecoder().decode(WhiskyWineVersion.self, from: data).version
+        return localVersion < remoteVersion ? remoteVersion : nil
     }
 
     public static func whiskyWineVersion() -> SemanticVersion? {
-        do {
-            let versionPlist = libraryFolder
-                .appending(path: "WhiskyWineVersion")
-                .appendingPathExtension("plist")
+        whiskyWineVersion(in: libraryFolder)
+    }
 
-            let decoder = PropertyListDecoder()
+    private static func whiskyWineVersion(in libraryFolder: URL) -> SemanticVersion? {
+        let versionPlist = libraryFolder
+            .appending(path: "WhiskyWineVersion")
+            .appendingPathExtension("plist")
+        guard FileManager.default.fileExists(atPath: versionPlist.path(percentEncoded: false)) else { return nil }
+
+        do {
             let data = try Data(contentsOf: versionPlist)
-            let info = try decoder.decode(WhiskyWineVersion.self, from: data)
-            return info.version
+            return try PropertyListDecoder().decode(WhiskyWineVersion.self, from: data).version
         } catch {
-            print(error)
+            Logger.wineKit.error("Unreadable WhiskyWine version file: \(error)")
             return nil
         }
     }

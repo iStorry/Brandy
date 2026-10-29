@@ -20,7 +20,8 @@ import SwiftUI
 import WhiskyKit
 
 struct WhiskyWineInstallView: View {
-    @State var installing: Bool = true
+    @State private var installing: Bool = true
+    @State private var failureMessage: String?
     @Binding var tarLocation: URL
     @Binding var path: [SetupStage]
     @Binding var showSetup: Bool
@@ -35,7 +36,11 @@ struct WhiskyWineInstallView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
-                if installing {
+                if let failureMessage {
+                    SetupFailureView(title: "setup.whiskywine.install.failed", message: failureMessage) {
+                        path.removeLast()
+                    }
+                } else if installing {
                     ProgressView()
                         .progressViewStyle(.circular)
                         .frame(width: 80)
@@ -50,20 +55,24 @@ struct WhiskyWineInstallView: View {
             Spacer()
         }
         .frame(width: 400, height: 200)
-        .onAppear {
-            Task.detached {
-                await WhiskyWineInstaller.install(from: tarLocation)
-                await MainActor.run {
-                    installing = false
-                }
-                sleep(2)
-                await proceed()
-            }
+        .task {
+            await install()
         }
     }
 
-    @MainActor
-    func proceed() {
-        showSetup = false
+    private func install() async {
+        let archive = tarLocation
+        do {
+            try await Task.detached {
+                try WhiskyWineInstaller.install(from: archive)
+            }.value
+            installing = false
+            try await Task.sleep(for: .seconds(2))
+            showSetup = false
+        } catch is CancellationError {
+            return
+        } catch {
+            failureMessage = error.localizedDescription
+        }
     }
 }
