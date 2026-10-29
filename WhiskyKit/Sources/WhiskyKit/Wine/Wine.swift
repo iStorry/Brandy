@@ -22,8 +22,8 @@ import os.log
 public class Wine {
     /// URL to the installed `DXVK` folder
     private static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
-    /// Path to the `wine64` binary
-    public static let wineBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wine64")
+    /// Path to the `wine` launcher, which runs both 32-bit and 64-bit programs
+    public static let wineBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wine")
     /// Parth to the `wineserver` binary
     private static let wineserverBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wineserver")
 
@@ -114,40 +114,29 @@ public class Wine {
     public static func generateRunCommand(
         at url: URL, bottle: Bottle, args: String, environment: [String: String]
     ) -> String {
-        var wineCmd = "\(wineBinary.esc) start /unix \(url.esc) \(args)"
-        let env = constructWineEnvironment(for: bottle, environment: environment)
-        for environment in env {
-            wineCmd = "\(environment.key)=\"\(environment.value)\" " + wineCmd
-        }
-
-        return wineCmd
+        let command = "\(wineBinary.path(percentEncoded: false).shellQuoted) start /unix "
+            + "\(url.path(percentEncoded: false).shellQuoted) \(args)"
+        let variables = constructWineEnvironment(for: bottle, environment: environment)
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value.shellQuoted)" }
+        return (variables + [command]).joined(separator: " ")
     }
 
     public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
         var cmd = """
-        export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
-        export WINE=\"wine64\"
-        alias wine=\"wine64\"
-        alias winecfg=\"wine64 winecfg\"
-        alias msiexec=\"wine64 msiexec\"
-        alias regedit=\"wine64 regedit\"
-        alias regsvr32=\"wine64 regsvr32\"
-        alias wineboot=\"wine64 wineboot\"
-        alias wineconsole=\"wine64 wineconsole\"
-        alias winedbg=\"wine64 winedbg\"
-        alias winefile=\"wine64 winefile\"
-        alias winepath=\"wine64 winepath\"
+        export PATH=\(WhiskyWineInstaller.binFolder.path(percentEncoded: false).shellQuoted):"$PATH"
+        export WINE=wine
         """
 
-        let env = constructWineEnvironment(for: bottle, environment: constructWineEnvironment(for: bottle))
-        for environment in env {
-            cmd += "\nexport \(environment.key)=\"\(environment.value)\""
+        for (key, value) in constructWineEnvironment(for: bottle).sorted(by: { $0.key < $1.key }) {
+            cmd += "\nexport \(key)=\(value.shellQuoted)"
         }
 
         return cmd
     }
 
     /// Run a `wineserver` command with the given arguments and return the output result
+    @discardableResult
     private static func runWineserver(_ args: [String], bottle: Bottle) async throws -> String {
         var result: [ProcessOutput] = []
 
@@ -208,10 +197,30 @@ public class Wine {
         return try await runWine(["cmd", "/c", url.path(percentEncoded: false)], bottle: bottle)
     }
 
-    public static func killBottle(bottle: Bottle) throws {
-        Task.detached(priority: .userInitiated) {
-            try await runWineserver(["-k"], bottle: bottle)
+    /// Runs a program, installer or batch file the person picked
+    public static func runFile(at url: URL, bottle: Bottle) async throws {
+        if url.pathExtension.lowercased() == "bat" {
+            try await runBatchFile(url: url, bottle: bottle)
+        } else {
+            try await runProgram(at: url, bottle: bottle)
         }
+    }
+
+    /// Stops every Windows program in the bottle and waits for its wineserver to exit
+    public static func stopAllProcesses(in bottle: Bottle) async throws {
+        try await runWineserver(["-k"], bottle: bottle)
+        try await runWineserver(["-w"], bottle: bottle)
+    }
+
+    /// Stops every Windows program in the bottle before returning, for when the app is quitting
+    /// and asynchronous work would never run
+    public static func stopAllProcessesBeforeExit(in bottle: Bottle) throws {
+        let process = Process()
+        process.executableURL = wineserverBinary
+        process.arguments = ["-k"]
+        process.environment = constructWineServerEnvironment(for: bottle)
+        try process.run()
+        process.waitUntilExit()
     }
 
     public static func enableDXVK(bottle: Bottle) throws {

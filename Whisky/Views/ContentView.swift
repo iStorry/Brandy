@@ -19,8 +19,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import WhiskyKit
-import SemanticVersion
-import os
 
 struct ContentView: View {
     @AppStorage("selectedBottleURL") private var selectedBottleURL: URL?
@@ -47,18 +45,18 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
+                Button("button.createBottle", systemImage: "plus") {
                     showBottleCreation.toggle()
-                } label: {
-                    Image(systemName: "plus")
-                        .help("button.createBottle")
                 }
+                .help("button.createBottle")
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     bottleVM.loadBottles()
                     if let bottle = bottleVM.bottles.first(where: { $0.url == selected }) {
-                        bottle.updateInstalledPrograms()
+                        Task {
+                            await bottle.updateInstalledPrograms()
+                        }
                     }
                     triggerRefresh.toggle()
                     withAnimation(.default) {
@@ -77,10 +75,10 @@ struct ContentView: View {
             BottleCreationView(newlyCreatedBottleURL: $newlyCreatedBottleURL)
         }
         .sheet(isPresented: $showSetup) {
-            SetupView(showSetup: $showSetup, firstTime: false)
+            OnboardingSheet(isPresented: $showSetup)
         }
         .sheet(isPresented: $showWhiskyWineUpdate) {
-            SetupView(showSetup: $showWhiskyWineUpdate, firstTime: false, initialPath: [.whiskyWineDownload])
+            OnboardingSheet(startingWith: .updateRuntime, isPresented: $showWhiskyWineUpdate)
         }
         .alert(
             "create.error.title",
@@ -114,10 +112,11 @@ struct ContentView: View {
                 }
             }
 
-            if !WhiskyWineInstaller.isWhiskyWineInstalled() {
+            if !WhiskyWineInstaller.isSupportedRuntimeInstalled() {
                 showSetup = true
+            } else {
+                showWhiskyWineUpdate = await WhiskyWineUpdate.offerIfAvailable()
             }
-            await offerWhiskyWineUpdate()
         }
     }
 
@@ -128,44 +127,18 @@ struct ContentView: View {
         )
     }
 
-    private func offerWhiskyWineUpdate() async {
-        let remoteVersion: SemanticVersion?
-        do {
-            remoteVersion = try await WhiskyWineInstaller.availableUpdate()
-        } catch {
-            Logger.wineKit.error("Failed to check for a WhiskyWine update: \(error)")
-            return
-        }
-        guard let remoteVersion else { return }
-
-        let alert = NSAlert()
-        alert.messageText = String(localized: "update.whiskywine.title")
-        alert.informativeText = String(format: String(localized: "update.whiskywine.description"),
-                                       String(WhiskyWineInstaller.whiskyWineVersion()
-                                              ?? SemanticVersion(0, 0, 0)),
-                                       String(remoteVersion))
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: String(localized: "update.whiskywine.update"))
-        alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            showWhiskyWineUpdate = true
-        }
-    }
-
     var sidebar: some View {
         ScrollViewReader { proxy in
             List(selection: $selected) {
-                Section {
+                Section("main.bottles") {
                     ForEach(filteredBottles) { bottle in
                         Group {
                             if bottle.inFlight {
-                                HStack {
-                                    Text(bottle.settings.name)
-                                    Spacer()
-                                    ProgressView().controlSize(.small)
-                                }
-                                .opacity(0.5)
+                                BottleRowLabel(name: bottle.settings.name,
+                                               subtitle: String(localized: "main.creatingBottle"),
+                                               systemImage: "wineglass")
+                                    .badge(Text(Image(systemName: "hourglass")))
+                                    .foregroundStyle(.secondary)
                             } else {
                                 BottleListEntry(bottle: bottle, selected: $selected, refresh: $triggerRefresh)
                                     .selectionDisabled(!bottle.isAvailable)
@@ -198,22 +171,22 @@ struct ContentView: View {
                     .disabled(bottle.inFlight)
                     .id(bottle.url)
             }
-        } else {
-            if (bottleVM.bottles.isEmpty || bottleVM.countActive() == 0) && bottlesLoaded {
-                VStack {
+        } else if bottlesLoaded {
+            if bottleVM.bottles.isEmpty || bottleVM.countActive() == 0 {
+                ContentUnavailableView {
+                    Label("main.empty.title", systemImage: "wineglass")
+                } description: {
                     Text("main.createFirst")
-                    Button {
+                } actions: {
+                    Button("button.createBottle") {
                         showBottleCreation.toggle()
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("button.createBottle")
-                        }
-                        .padding(6)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.accentColor)
+                    .controlSize(.large)
                 }
+            } else {
+                ContentUnavailableView("main.noSelection", systemImage: "sidebar.left",
+                                       description: Text("main.noSelection.description"))
             }
         }
     }

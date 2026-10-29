@@ -24,6 +24,7 @@ import os
 @main
 struct WhiskyApp: App {
     @State var showSetup: Bool = false
+    @AppStorage("showAdvanced") private var showAdvanced = false
     @State private var migrationError: Error?
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openURL) var openURL
@@ -46,24 +47,30 @@ struct WhiskyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(showSetup: $showSetup)
-                .frame(minWidth: ViewWidth.large, minHeight: 316)
-                .environmentObject(BottleVM.shared)
-                .alert("migration.error.title", isPresented: isShowingMigrationError) {
-                } message: {
-                    Text("migration.error.message.\(migrationError?.localizedDescription ?? "")")
+            Group {
+                if showAdvanced {
+                    ContentView(showSetup: $showSetup)
+                } else {
+                    HomeView(showSetup: $showSetup)
                 }
-                .onAppear {
-                    NSWindow.allowsAutomaticWindowTabbing = false
+            }
+            .frame(minWidth: ViewWidth.large, minHeight: 480)
+            .environmentObject(BottleVM.shared)
+            .alert("migration.error.title", isPresented: isShowingMigrationError) {
+            } message: {
+                Text("migration.error.message.\(migrationError?.localizedDescription ?? "")")
+            }
+            .onAppear {
+                NSWindow.allowsAutomaticWindowTabbing = false
 
-                    Task.detached {
-                        do {
-                            try WineLogs.prune()
-                        } catch {
-                            Logger.wineKit.error("Failed to prune logs: \(error)")
-                        }
+                Task.detached {
+                    do {
+                        try WineLogs.prune()
+                    } catch {
+                        Logger.wineKit.error("Failed to prune logs: \(error)")
                     }
                 }
+            }
         }
         // Don't ask me how this works, it just does
         .handlesExternalEvents(matching: ["{same path of URL?}"])
@@ -116,18 +123,8 @@ struct WhiskyApp: App {
                 }
             }
             CommandGroup(replacing: .help) {
-                Button("help.website") {
-                    if let url = URL(string: "https://getwhisky.app/") {
-                        openURL(url)
-                    }
-                }
                 Button("help.github") {
-                    if let url = URL(string: "https://github.com/Whisky-App/Whisky") {
-                        openURL(url)
-                    }
-                }
-                Button("help.discord") {
-                    if let url = URL(string: "https://discord.gg/CsqAfs9CnM") {
+                    if let url = URL(string: "https://github.com/iStorry/Whisky") {
                         openURL(url)
                     }
                 }
@@ -140,10 +137,23 @@ struct WhiskyApp: App {
 
     static func killBottles() {
         for bottle in BottleVM.shared.bottles {
+            Task {
+                do {
+                    try await Wine.stopAllProcesses(in: bottle)
+                } catch {
+                    Logger.wineKit.error("Failed to stop `\(bottle.settings.name)`: \(error)")
+                }
+            }
+        }
+    }
+
+    /// Stops every bottle before returning, since the app is about to exit
+    static func killBottlesBeforeExit() {
+        for bottle in BottleVM.shared.bottles where bottle.isAvailable {
             do {
-                try Wine.killBottle(bottle: bottle)
+                try Wine.stopAllProcessesBeforeExit(in: bottle)
             } catch {
-                print("Failed to kill bottle: \(error)")
+                Logger.wineKit.error("Failed to stop `\(bottle.settings.name)`: \(error)")
             }
         }
     }

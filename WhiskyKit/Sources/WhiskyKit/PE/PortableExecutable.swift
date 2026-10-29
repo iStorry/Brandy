@@ -18,6 +18,7 @@
 
 import Foundation
 import AppKit
+import os
 
 public struct PEError: Error {
     public let message: String
@@ -144,7 +145,7 @@ public struct PEFile: Hashable, Equatable, Sendable {
     }
 
     /// The best icon for this executable
-    /// - Returns: An `NSImage` if there is a renderable icon in the resource directory table
+    /// - Returns: The largest renderable icon in the resource directory table, or `nil` if there is none
     public func bestIcon() -> NSImage? {
         guard let handle = try? FileHandle(forReadingFrom: url) else {
             return nil
@@ -169,7 +170,8 @@ public struct PEFile: Hashable, Equatable, Sendable {
                             }
                         }
                     } catch {
-                        print("Failed to get icon")
+                        // Skip this entry; the executable's other icons may still render
+                        Logger.wineKit.debug("Unreadable icon in `\(url.lastPathComponent)`: \(error)")
                     }
                 } else if bitmapInfo.colorFormat != .unknown {
                     return bitmapInfo.renderBitmap(handle: handle, offset: UInt64(offset + bitmapInfo.size))
@@ -179,10 +181,6 @@ public struct PEFile: Hashable, Equatable, Sendable {
             }
             .filter { $0.isValid }
 
-        if !icons.isEmpty {
-            return icons.max(by: { $0.size.height < $1.size.height })
-        } else {
-            return NSImage()
-        }
+        return icons.max(by: { $0.size.height < $1.size.height })
     }
 }

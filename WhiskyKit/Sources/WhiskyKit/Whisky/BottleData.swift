@@ -32,6 +32,11 @@ public struct BottleData: Codable {
     /// `UserDefaults` key for the folder new bottles are created in
     public static let defaultBottleLocationKey = "defaultBottleLocation"
 
+    /// The folder the user chose for new bottles, or the default one
+    public static var preferredBottleLocation: URL {
+        UserDefaults.standard.url(forKey: defaultBottleLocationKey) ?? defaultBottleDir
+    }
+
     static let currentVersion = SemanticVersion(1, 0, 0)
 
     static func containerDir(for bundleIdentifier: String) -> URL {

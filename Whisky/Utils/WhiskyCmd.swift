@@ -26,7 +26,7 @@ class WhiskyCmd {
         if let whiskyCmdURL = whiskyCmdURL {
             // swiftlint:disable line_length
             let script = """
-            do shell script "ln -fs \(whiskyCmdURL.path(percentEncoded: false)) /usr/local/bin/whisky" with administrator privileges
+            do shell script "ln -fs \(whiskyCmdURL.path(percentEncoded: false)) /usr/local/bin/brandy" with administrator privileges
             """
             // swiftlint:enable line_length
 
@@ -36,7 +36,6 @@ class WhiskyCmd {
                 appleScript.executeAndReturnError(&error)
 
                 if let error = error {
-                    print(error)
                     if let description = error["NSAppleScriptErrorMessage"] as? String {
                         await MainActor.run {
                             let alert = NSAlert()

@@ -23,7 +23,6 @@ import WhiskyKit
 enum BottleStage {
     case config
     case programs
-    case processes
 }
 
 struct BottleView: View {
@@ -32,90 +31,62 @@ struct BottleView: View {
     @State private var programLoading: Bool = false
     @State private var showWinetricksSheet: Bool = false
 
-    private let gridLayout = [GridItem(.adaptive(minimum: 100, maximum: .infinity))]
-
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                LazyVGrid(columns: gridLayout, alignment: .center) {
-                    ForEach(bottle.pinnedPrograms, id: \.id) { pinnedProgram in
-                        PinView(
-                            bottle: bottle, program: pinnedProgram.program, pin: pinnedProgram.pin, path: $path
-                        )
-                    }
-                    PinAddView(bottle: bottle)
+            Form {
+                Section {
+                    BottleHeaderView(bottle: bottle)
                 }
-                .padding()
-                Form {
+                Section("bottle.pinned") {
+                    PinnedProgramsGrid(bottle: bottle, path: $path)
+                }
+                Section {
                     NavigationLink(value: BottleStage.programs) {
-                        Label("tab.programs", systemImage: "list.bullet")
+                        Label("tab.programs", systemImage: "square.grid.2x2")
+                            .badge(bottle.programs.count)
                     }
                     NavigationLink(value: BottleStage.config) {
-                        Label("tab.config", systemImage: "gearshape")
-                    }
-//                    NavigationLink(value: BottleStage.processes) {
-//                        Label("tab.processes", systemImage: "hockey.puck.circle")
-//                    }
-                }
-                .formStyle(.grouped)
-                .scrollDisabled(true)
-            }
-            .bottomBar {
-                HStack {
-                    Spacer()
-                    Button("button.cDrive") {
-                        bottle.openCDrive()
-                    }
-                    Button("button.terminal") {
-                        bottle.openTerminal()
-                    }
-                    Button("button.winetricks") {
-                        showWinetricksSheet.toggle()
-                    }
-                    Button("button.run") {
-                        let panel = NSOpenPanel()
-                        panel.allowsMultipleSelection = false
-                        panel.canChooseDirectories = false
-                        panel.canChooseFiles = true
-                        panel.allowedContentTypes = [UTType.exe,
-                                                     UTType(exportedAs: "com.microsoft.msi-installer"),
-                                                     UTType(exportedAs: "com.microsoft.bat")]
-                        panel.directoryURL = bottle.url.appending(path: "drive_c")
-                        panel.begin { result in
-                            programLoading = true
-                            Task(priority: .userInitiated) {
-                                if result == .OK {
-                                    if let url = panel.urls.first {
-                                        do {
-                                            if url.pathExtension == "bat" {
-                                                try await Wine.runBatchFile(url: url, bottle: bottle)
-                                            } else {
-                                                try await Wine.runProgram(at: url, bottle: bottle)
-                                            }
-                                        } catch {
-                                            print("Failed to run external program: \(error)")
-                                        }
-                                        programLoading = false
-                                    }
-                                } else {
-                                    programLoading = false
-                                }
-                                updateStartMenu()
-                            }
+                        Label {
+                            Text("tab.config")
+                            Text(bottle.settings.configurationSummary)
+                        } icon: {
+                            Image(systemName: "gearshape")
                         }
                     }
-                    .disabled(programLoading)
+                }
+            }
+            .formStyle(.grouped)
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
                     if programLoading {
-                        Spacer()
-                            .frame(width: 10)
                         ProgressView()
                             .controlSize(.small)
                     }
+                    Button("button.run", systemImage: "play.fill") {
+                        runExternalProgram()
+                    }
+                    .disabled(programLoading)
+                    .help("button.run")
+                    Menu("bottle.more", systemImage: "ellipsis.circle") {
+                        Button("button.cDrive", systemImage: "internaldrive") {
+                            bottle.openCDrive()
+                        }
+                        Button("button.terminal", systemImage: "terminal") {
+                            bottle.openTerminal()
+                        }
+                        Button("button.winetricks", systemImage: "wand.and.stars") {
+                            showWinetricksSheet.toggle()
+                        }
+                        Divider()
+                        Button("button.showInFinder", systemImage: "folder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([bottle.url])
+                        }
+                    }
+                    .help("bottle.more")
                 }
-                .padding()
             }
-            .onAppear {
-                updateStartMenu()
+            .task {
+                await updateStartMenu()
             }
             .disabled(!bottle.isAvailable)
             .navigationTitle(bottle.settings.name)
@@ -135,8 +106,6 @@ struct BottleView: View {
                     ProgramsView(
                         bottle: bottle, path: $path
                     )
-                case .processes:
-                    RunningProcessesView(bottle: bottle)
                 }
             }
             .navigationDestination(for: Program.self) { program in
@@ -145,8 +114,32 @@ struct BottleView: View {
         }
     }
 
-    private func updateStartMenu() {
-        bottle.updateInstalledPrograms()
+    private func runExternalProgram() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [UTType.exe,
+                                     UTType(exportedAs: "com.microsoft.msi-installer"),
+                                     UTType(exportedAs: "com.microsoft.bat")]
+        panel.directoryURL = bottle.url.appending(path: "drive_c")
+        panel.begin { result in
+            guard result == .OK, let url = panel.urls.first else { return }
+            programLoading = true
+            Task(priority: .userInitiated) {
+                do {
+                    try await Wine.runFile(at: url, bottle: bottle)
+                } catch {
+                    ErrorAlert.show(String(localized: "error.runProgram"), error: error)
+                }
+                programLoading = false
+                await updateStartMenu()
+            }
+        }
+    }
+
+    private func updateStartMenu() async {
+        await bottle.updateInstalledPrograms()
 
         let startMenuPrograms = bottle.getStartMenuPrograms()
         for startMenuProgram in startMenuPrograms {
@@ -154,12 +147,36 @@ struct BottleView: View {
             // For some godforsaken reason "foo/bar" != "foo/Bar" so...
             program.url.path().caseInsensitiveCompare(startMenuProgram.url.path()) == .orderedSame {
                 program.pinned = true
-                guard !bottle.settings.pins.contains(where: { $0.url == program.url }) else { return }
+                guard !bottle.settings.pins.contains(where: { $0.url == program.url }) else { continue }
                 bottle.settings.pins.append(PinnedProgram(
                     name: program.url.deletingPathExtension().lastPathComponent,
                     url: program.url
                 ))
             }
         }
+    }
+}
+
+private struct BottleHeaderView: View {
+    @ObservedObject var bottle: Bottle
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "wineglass.fill")
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 52, height: 52)
+                .background(.tint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(bottle.settings.name)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                Text(bottle.summary)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
     }
 }

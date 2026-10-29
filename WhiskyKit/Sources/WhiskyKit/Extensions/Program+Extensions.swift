@@ -30,14 +30,9 @@ extension Program {
     }
 
     func runInWine() {
-        let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
-        let environment = generateEnvironment()
-
         Task.detached(priority: .userInitiated) {
             do {
-                try await Wine.runProgram(
-                    at: self.url, args: arguments, bottle: self.bottle, environment: environment
-                )
+                try await self.launch()
             } catch {
                 await MainActor.run {
                     self.showRunError(message: error.localizedDescription)
@@ -46,31 +41,31 @@ extension Program {
         }
     }
 
-    public func generateTerminalCommand() -> String {
+    /// Runs the program with its settings, plus `extraArguments`, and returns once it, and anything it
+    /// started, has exited
+    public func launch(extraArguments: [String] = []) async throws {
+        let arguments = try SteamInstaller.prepareLaunch(of: url, in: bottle)
+            + settings.arguments.split { $0.isWhitespace }.map(String.init)
+            + extraArguments
+        try await Wine.runProgram(at: url, args: arguments, bottle: bottle, environment: generateEnvironment())
+    }
+
+    /// A shell command that runs the program with its settings, for Terminal and for shortcut apps
+    public func generateTerminalCommand() throws -> String {
+        let arguments = try SteamInstaller.prepareLaunch(of: url, in: bottle).map(\.shellQuoted)
+            + [settings.arguments]
         return Wine.generateRunCommand(
-            at: self.url, bottle: bottle, args: settings.arguments, environment: generateEnvironment()
+            at: url, bottle: bottle, args: arguments.joined(separator: " "), environment: generateEnvironment()
         )
     }
 
     public func runInTerminal() {
-        let wineCmd = generateTerminalCommand().replacingOccurrences(of: "\\", with: "\\\\")
-
-        let script = """
-        tell application "Terminal"
-            activate
-            do script "\(wineCmd)"
-        end tell
-        """
-
-        Task.detached(priority: .userInitiated) {
-            var error: NSDictionary?
-            guard let appleScript = NSAppleScript(source: script) else { return }
-            appleScript.executeAndReturnError(&error)
-
-            if let error = error {
-                Logger.wineKit.error("Failed to run terminal script \(error)")
-                guard let description = error["NSAppleScriptErrorMessage"] as? String else { return }
-                await self.showRunError(message: String(describing: description))
+        Task { @MainActor in
+            do {
+                try Terminal.run(generateTerminalCommand())
+            } catch {
+                Logger.wineKit.error("Failed to run `\(self.name)` in Terminal: \(error)")
+                showRunError(message: error.localizedDescription)
             }
         }
     }

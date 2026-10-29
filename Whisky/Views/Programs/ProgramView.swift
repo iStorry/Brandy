@@ -22,96 +22,90 @@ import UniformTypeIdentifiers
 
 struct ProgramView: View {
     @ObservedObject var program: Program
-    @State var programLoading: Bool = false
-    @State var cachedIconImage: Image?
-    @AppStorage("configSectionExapnded") private var configSectionExpanded: Bool = true
-    @AppStorage("envArgsSectionExpanded") private var envArgsSectionExpanded: Bool = true
+    @State private var programLoading: Bool = false
 
     var body: some View {
         Form {
-            Section("program.config", isExpanded: $configSectionExpanded) {
+            Section {
+                HStack(spacing: 14) {
+                    ProgramIconView(program: program, size: 48)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(program.displayName)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                        Text(program.displayLocation)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 4)
+            }
+            Section {
+                LabeledContent("program.args") {
+                    TextField("program.args", text: $program.settings.arguments,
+                              prompt: Text("program.args.prompt"))
+                        .labelsHidden()
+                        .font(.system(.body, design: .monospaced))
+                        .multilineTextAlignment(.trailing)
+                }
                 Picker("locale.title", selection: $program.settings.locale) {
                     ForEach(Locales.allCases, id: \.self) { locale in
                         Text(locale.pretty()).id(locale)
                     }
                 }
-                VStack {
-                    HStack {
-                        Text("program.args")
-                        Spacer()
-                    }
-                    TextField("program.args", text: $program.settings.arguments)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-                        .labelsHidden()
-                }
+            } header: {
+                Text("program.launch")
+            } footer: {
+                Text("program.launch.info")
             }
-            EnvironmentArgView(program: program, isExpanded: $envArgsSectionExpanded)
+            EnvironmentArgView(program: program)
         }
-        .bottomBar {
-            HStack {
-                Spacer()
-                Button("button.showInFinder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([program.url])
+        .formStyle(.grouped)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if programLoading {
+                    ProgressView()
+                        .controlSize(.small)
                 }
-                Button("button.createShortcut") {
-                    let panel = NSSavePanel()
-                    let applicationDir = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask)[0]
-                    let name = program.name.replacingOccurrences(of: ".exe", with: "")
-                    panel.directoryURL = applicationDir
-                    panel.canCreateDirectories = true
-                    panel.allowedContentTypes = [UTType.applicationBundle]
-                    panel.allowsOtherFileTypes = false
-                    panel.isExtensionHidden = true
-                    panel.nameFieldStringValue = name + ".app"
-                    panel.begin { result in
-                        if result == .OK {
-                            if let url = panel.url {
-                                let name = url.deletingPathExtension().lastPathComponent
-                                Task(priority: .userInitiated) {
-                                    await ProgramShortcut.createShortcut(program, app: url, name: name)
-                                }
-                            }
-                        }
-                    }
-                }
-                Button("button.run") {
+                Button("button.run", systemImage: "play.fill") {
                     programLoading = true
                     program.run()
                 }
                 .disabled(programLoading)
-                if programLoading {
-                    Spacer()
-                        .frame(width: 10)
-                    ProgressView()
-                        .controlSize(.small)
+                .help("button.run")
+                Menu("bottle.more", systemImage: "ellipsis.circle") {
+                    Button("button.showInFinder", systemImage: "folder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([program.url])
+                    }
+                    Button("button.createShortcut", systemImage: "square.and.arrow.down") {
+                        createShortcut()
+                    }
                 }
-            }
-            .padding()
-        }
-        .toolbar {
-            if let image = cachedIconImage {
-                ToolbarItem(id: "ProgramViewIcon", placement: .navigation) {
-                    image
-                        .resizable()
-                        .frame(width: 25, height: 25)
-                        .padding(.trailing, 5)
-                }
-            } else {
-                ToolbarItem(id: "ProgramViewIcon", placement: .navigation) {
-                    Image(systemName: "app.dashed")
-                        .resizable()
-                        .frame(width: 25, height: 25)
-                        .padding(.trailing, 5)
-                }
+                .help("bottle.more")
             }
         }
-        .navigationTitle(program.name)
-        .formStyle(.grouped)
-        .animation(.whiskyDefault, value: configSectionExpanded)
-        .animation(.whiskyDefault, value: envArgsSectionExpanded)
-        .task {
-            if let fetchedImage = program.peFile?.bestIcon() { self.cachedIconImage = Image(nsImage: fetchedImage) }
+        .navigationTitle(program.displayName)
+    }
+
+    private func createShortcut() {
+        let panel = NSSavePanel()
+        let applicationDir = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask)[0]
+        panel.directoryURL = applicationDir
+        panel.canCreateDirectories = true
+        panel.allowedContentTypes = [UTType.applicationBundle]
+        panel.allowsOtherFileTypes = false
+        panel.isExtensionHidden = true
+        panel.nameFieldStringValue = program.displayName + ".app"
+        panel.begin { result in
+            guard result == .OK, let url = panel.url else { return }
+            let name = url.deletingPathExtension().lastPathComponent
+            Task(priority: .userInitiated) {
+                await ProgramShortcut.createShortcut(program, app: url, name: name)
+            }
         }
     }
 }

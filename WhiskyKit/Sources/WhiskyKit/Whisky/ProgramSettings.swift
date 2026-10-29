@@ -73,9 +73,7 @@ public struct ProgramSettings: Codable {
 
     static func decode(from settingsURL: URL) throws -> ProgramSettings {
         guard FileManager.default.fileExists(atPath: settingsURL.path(percentEncoded: false)) else {
-            let settings = ProgramSettings()
-            try settings.encode(to: settingsURL)
-            return settings
+            return ProgramSettings()
         }
 
         let data = try Data(contentsOf: settingsURL)

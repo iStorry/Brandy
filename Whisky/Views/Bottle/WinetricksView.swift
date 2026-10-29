@@ -22,6 +22,7 @@ import WhiskyKit
 struct WinetricksView: View {
     var bottle: Bottle
     @State private var winetricks: [WinetricksCategory]?
+    @State private var loadError: String?
     @State private var selectedTrick: UUID?
     @Environment(\.dismiss) var dismiss
 
@@ -61,15 +62,16 @@ struct WinetricksView: View {
 
                             let trick = winetricks.flatMap { $0.verbs }.first(where: { $0.id == selectedTrick })
                             if let trickName = trick?.name {
-                                Task.detached {
-                                    await Winetricks.runCommand(command: trickName, bottle: bottle)
-                                }
+                                Winetricks.runCommand(command: trickName, bottle: bottle)
                             }
                             dismiss()
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 }
+            } else if let loadError {
+                ContentUnavailableView("winetricks.loadFailed", systemImage: "exclamationmark.triangle",
+                                       description: Text(loadError))
             } else {
                 Spacer()
                 ProgressView()
@@ -79,13 +81,11 @@ struct WinetricksView: View {
             }
         }
         .padding()
-        .onAppear {
-            Task.detached {
-                let tricks = await Winetricks.parseVerbs()
-
-                await MainActor.run {
-                    winetricks = tricks
-                }
+        .task {
+            do {
+                winetricks = try await Task.detached { try Winetricks.parseVerbs() }.value
+            } catch {
+                loadError = error.localizedDescription
             }
         }
         .frame(minWidth: ViewWidth.large, minHeight: 400)

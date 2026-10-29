@@ -24,8 +24,7 @@ struct BottleCreationView: View {
 
     @State private var newBottleName: String = ""
     @State private var newBottleVersion: WinVersion = .win10
-    @State private var newBottleURL: URL = UserDefaults.standard.url(forKey: BottleData.defaultBottleLocationKey)
-                                           ?? BottleData.defaultBottleDir
+    @State private var newBottleURL: URL = BottleData.preferredBottleLocation
     @State private var nameValid: Bool = false
 
     @Environment(\.dismiss) private var dismiss

@@ -27,17 +27,15 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: Please provide the logs from the launched Wine process. These can be found by pressing `CMD + L` in Whisky.
+      description: Please provide the logs from the launched Wine process. These can be found by pressing `CMD + L` in Brandy.
       render: bash
     validations:
       required: true
-  - type: dropdown
-    id: whisky-version
+  - type: input
+    id: brandy-version
     attributes:
-      label: What version of Whisky are you using?
-      options:
-        - "2.3.2"
-        - "<2.3.2"
+      label: What version of Brandy are you using?
+      description: Shown in Brandy > About Brandy.
     validations:
       required: true
   - type: dropdown
@@ -45,6 +43,8 @@ body:
     attributes:
       label: What version of macOS are you using?
       options:
+        - "Tahoe (macOS 26)"
+        - "Sequoia (macOS 15)"
         - "Sonoma (macOS 14)"
     validations:
       required: true

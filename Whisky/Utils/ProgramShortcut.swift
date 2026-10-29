@@ -31,15 +31,15 @@ class ProgramShortcut {
             // First create shell script
             let script = """
             #!/bin/bash
-            \(program.generateTerminalCommand())
+            \(try program.generateTerminalCommand())
             """
             let scriptUrl = macos.appending(path: "launch")
             try script.write(to: scriptUrl,
                              atomically: false,
                              encoding: .utf8)
 
-            // Make shell script runable
-            try FileManager.default.setAttributes([.posixPermissions: 0o777],
+            // Executable by everyone, writable only by its owner
+            try FileManager.default.setAttributes([.posixPermissions: 0o755],
                                                   ofItemAtPath: scriptUrl.path(percentEncoded: false))
 
             // Create Info.plist (set category for Game mode)
@@ -77,7 +77,7 @@ class ProgramShortcut {
                                        options: NSWorkspace.IconCreationOptions())
             NSWorkspace.shared.activateFileViewerSelecting([app])
         } catch {
-            print(error)
+            await ErrorAlert.show(String(localized: "error.createShortcut"), error: error)
         }
     }
 }

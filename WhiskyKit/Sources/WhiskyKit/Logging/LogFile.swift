@@ -91,7 +91,7 @@ public extension LogFile {
         var header = String()
         let macOSVersion = ProcessInfo.processInfo.operatingSystemVersion
 
-        header += "Whisky Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "")\n"
+        header += "Brandy Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "")\n"
         header += "Date: \(ISO8601DateFormatter().string(from: Date.now))\n"
         header += "macOS Version: \(macOSVersion.majorVersion).\(macOSVersion.minorVersion).\(macOSVersion.patchVersion)\n\n"
         write(header)
@@ -120,8 +120,7 @@ public extension LogFile {
         if let version = WhiskyWineInstaller.whiskyWineVersion() {
             header += "WhiskyWine Version: \(version.major).\(version.minor).\(version.patch)\n"
         }
-        header += "Windows Version: \(bottle.settings.windowsVersion)\n"
-        header += "Enhanced Sync: \(bottle.settings.enhancedSync)\n\n"
+        header += "Windows Version: \(bottle.settings.windowsVersion)\n\n"
 
         header += "Metal HUD: \(bottle.settings.metalHud)\n"
         header += "Metal Trace: \(bottle.settings.metalTrace)\n\n"

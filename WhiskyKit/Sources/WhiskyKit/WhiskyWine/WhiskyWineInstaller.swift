@@ -21,16 +21,10 @@ import os
 import SemanticVersion
 
 public enum WhiskyWineInstallerError: LocalizedError {
-    case missingResponse
-    case unexpectedStatus(Int)
     case missingVersionInfo
 
     public var errorDescription: String? {
         switch self {
-        case .missingResponse:
-            return "The server did not respond."
-        case .unexpectedStatus(let status):
-            return "The server responded with HTTP \(status)."
         case .missingVersionInfo:
             return "The downloaded archive does not contain a WhiskyWine version file."
         }
@@ -38,7 +32,7 @@ public enum WhiskyWineInstallerError: LocalizedError {
 }
 
 public class WhiskyWineInstaller {
-    /// The Whisky application folder
+    /// The app's folder in Application Support
     public static let applicationFolder = applicationFolder(for: Bundle.whiskyBundleIdentifier)
 
     /// The folder of all the library files
@@ -47,16 +41,22 @@ public class WhiskyWineInstaller {
     /// URL to the installed `wine` `bin` directory
     public static let binFolder: URL = libraryFolder.appending(path: "Wine").appending(path: "bin")
 
-    /// Assets of the `whiskywine` release, which `scripts/publish-whiskywine.sh` replaces on every runtime update
+    /// The runtime major version this app runs; Wine's layout changes between majors
+    public static let supportedMajorVersion = 3
+    /// The first runtime with everything this app relies on: 3.1 added the Steam web helper shim
+    private static let minimumVersion = SemanticVersion(3, 1, 0)
+
+    /// Assets of the release for the supported major version, which `scripts/publish-whiskywine.sh` publishes
     private static let distributionURL: URL = {
-        guard let url = URL(string: "https://github.com/iStorry/Whisky/releases/download/whiskywine/") else {
+        let release = "https://github.com/iStorry/Whisky/releases/download/whiskywine-\(supportedMajorVersion)/"
+        guard let url = URL(string: release) else {
             preconditionFailure("Invalid WhiskyWine distribution URL")
         }
         return url
     }()
 
     /// The archive holding the `Libraries` folder
-    public static let librariesArchiveURL = distributionURL.appending(path: "Libraries.tar.gz")
+    private static let librariesArchiveURL = distributionURL.appending(path: "Libraries.tar.gz")
 
     private static let remoteVersionURL = distributionURL.appending(path: "WhiskyWineVersion.plist")
 
@@ -73,24 +73,15 @@ public class WhiskyWineInstaller {
         return whiskyWineVersion() != nil
     }
 
-    /// Validates a finished `URLSessionDownloadTask` and moves its file out of the session's temporary
-    /// location, which is deleted as soon as the completion handler returns
-    public static func acceptDownload(at location: URL?, response: URLResponse?, error: Error?) throws -> URL {
-        if let error {
-            throw error
-        }
-        guard let location, let response = response as? HTTPURLResponse else {
-            throw WhiskyWineInstallerError.missingResponse
-        }
-        guard response.statusCode == 200 else {
-            throw WhiskyWineInstallerError.unexpectedStatus(response.statusCode)
-        }
+    /// Installed, of the major version this app runs, and new enough to have everything it relies on
+    public static func isSupportedRuntimeInstalled() -> Bool {
+        guard let version = whiskyWineVersion() else { return false }
+        return version.major == supportedMajorVersion && version >= minimumVersion
+    }
 
-        let destination = FileManager.default.temporaryDirectory
-            .appending(path: UUID().uuidString)
-            .appendingPathExtension("tar.gz")
-        try FileManager.default.moveItem(at: location, to: destination)
-        return destination
+    /// Downloads the runtime archive for `install(from:)`
+    public static func download(progress: @escaping @Sendable (DownloadProgress) -> Void) async throws -> URL {
+        try await Download.file(from: librariesArchiveURL, progress: progress)
     }
 
     /// Installs the archive, replacing the current `Libraries` folder only once the new one is extracted and valid
@@ -130,24 +121,16 @@ public class WhiskyWineInstaller {
         }
     }
 
-    public static func uninstall() {
-        do {
-            try FileManager.default.removeItem(at: libraryFolder)
-        } catch {
-            print("Failed to uninstall WhiskyWine: \(error)")
-        }
-    }
-
     /// The newer WhiskyWine version available for download, or `nil` when the installed one is current
     public static func availableUpdate() async throws -> SemanticVersion? {
         guard let localVersion = whiskyWineVersion() else { return nil }
 
         let (data, response) = try await URLSession(configuration: .ephemeral).data(from: remoteVersionURL)
         guard let response = response as? HTTPURLResponse else {
-            throw WhiskyWineInstallerError.missingResponse
+            throw DownloadError.missingResponse
         }
         guard response.statusCode == 200 else {
-            throw WhiskyWineInstallerError.unexpectedStatus(response.statusCode)
+            throw DownloadError.unexpectedStatus(response.statusCode)
         }
 
         let remoteVersion = try PropertyListDecoder().decode(WhiskyWineVersion.self, from: data).version

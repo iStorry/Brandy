@@ -61,22 +61,18 @@ struct ProcessStreamTests {
         #expect(logged.contains("out\n") && logged.contains("err\n"))
     }
 
-    private func cpuTime() -> TimeInterval {
-        var usage = rusage()
-        getrusage(RUSAGE_SELF, &usage)
-        let user = TimeInterval(usage.ru_utime.tv_sec) + TimeInterval(usage.ru_utime.tv_usec) / 1_000_000
-        let system = TimeInterval(usage.ru_stime.tv_sec) + TimeInterval(usage.ru_stime.tv_usec) / 1_000_000
-        return user + system
-    }
+    @Test func stopsReadingAtEndOfFile() async throws {
+        let process = Process()
+        process.executableURL = URL(filePath: "/bin/sh")
+        process.arguments = ["-c", "echo done"]
 
-    @Test func goesIdleAfterEndOfFile() async throws {
-        _ = try await collect("echo done")
+        for await _ in try process.runStream(name: "sh", logFile: nil) {}
 
-        let before = cpuTime()
-        try await Task.sleep(for: .milliseconds(500))
-        let spent = cpuTime() - before
-
-        #expect(spent < 0.1, "Readers kept polling the closed pipes for \(spent)s of CPU")
+        // A handler left on a closed pipe is called again immediately, forever, spinning a core
+        let output = try #require(process.standardOutput as? Pipe)
+        let errors = try #require(process.standardError as? Pipe)
+        #expect(output.fileHandleForReading.readabilityHandler == nil)
+        #expect(errors.fileHandleForReading.readabilityHandler == nil)
     }
 
     @Test func waitsForChildrenThatKeepThePipesOpen() async throws {

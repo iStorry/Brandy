@@ -20,7 +20,7 @@ import Foundation
 
 public extension Bundle {
     static var whiskyBundleIdentifier: String {
-        return Bundle.main.bundleIdentifier ?? "com.istorry.Whisky"
+        return Bundle.main.bundleIdentifier ?? "com.istorry.Brandy"
     }
 
     /// The identifier upstream Whisky stored its data under, before this fork

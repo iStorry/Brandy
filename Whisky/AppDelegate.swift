@@ -32,6 +32,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Matches the default SettingsView shows, which `UserDefaults.bool(forKey:)` would otherwise read as off
+        UserDefaults.standard.register(defaults: [SettingsView.killOnTerminateKey: true])
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !hasShownMoveToApplicationsAlert && !AppDelegate.insideAppsFolder {
             DispatchQueue.main.asyncAfter(deadline: .now()) {
@@ -43,8 +48,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if UserDefaults.standard.bool(forKey: "killOnTerminate") {
-            WhiskyApp.killBottles()
+        if UserDefaults.standard.bool(forKey: SettingsView.killOnTerminateKey) {
+            WhiskyApp.killBottlesBeforeExit()
         }
     }
 
@@ -56,7 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Bundle.main.resourceURL?.deletingLastPathComponent().deletingLastPathComponent()
     }
 
-    private static let expectedUrl = URL(fileURLWithPath: "/Applications/Whisky.app")
+    private static let expectedUrl = URL(fileURLWithPath: "/Applications/Brandy.app")
 
     private static var insideAppsFolder: Bool {
         if let url = appUrl {
@@ -82,7 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 _ = try FileManager.default.replaceItemAt(AppDelegate.expectedUrl, withItemAt: appURL)
                 NSWorkspace.shared.open(AppDelegate.expectedUrl)
             } catch {
-                print("Failed to move the app: \(error)")
+                ErrorAlert.show(String(localized: "error.moveApp"), error: error)
             }
         }
     }
