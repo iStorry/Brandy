@@ -114,24 +114,22 @@ public class Wine {
     public static func generateRunCommand(
         at url: URL, bottle: Bottle, args: String, environment: [String: String]
     ) -> String {
-        var wineCmd = "\(wineBinary.esc) start /unix \(url.esc) \(args)"
-        let env = constructWineEnvironment(for: bottle, environment: environment)
-        for environment in env {
-            wineCmd = "\(environment.key)=\"\(environment.value)\" " + wineCmd
-        }
-
-        return wineCmd
+        let command = "\(wineBinary.path(percentEncoded: false).shellQuoted) start /unix "
+            + "\(url.path(percentEncoded: false).shellQuoted) \(args)"
+        let variables = constructWineEnvironment(for: bottle, environment: environment)
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value.shellQuoted)" }
+        return (variables + [command]).joined(separator: " ")
     }
 
     public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
         var cmd = """
-        export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
-        export WINE=\"wine\"
+        export PATH=\(WhiskyWineInstaller.binFolder.path(percentEncoded: false).shellQuoted):"$PATH"
+        export WINE=wine
         """
 
-        let env = constructWineEnvironment(for: bottle, environment: constructWineEnvironment(for: bottle))
-        for environment in env {
-            cmd += "\nexport \(environment.key)=\"\(environment.value)\""
+        for (key, value) in constructWineEnvironment(for: bottle).sorted(by: { $0.key < $1.key }) {
+            cmd += "\nexport \(key)=\(value.shellQuoted)"
         }
 
         return cmd

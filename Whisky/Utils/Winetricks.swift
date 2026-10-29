@@ -45,37 +45,24 @@ class Winetricks {
     static let winetricksURL: URL = WhiskyWineInstaller.libraryFolder
         .appending(path: "winetricks")
 
-    static func runCommand(command: String, bottle: Bottle) async {
+    @MainActor
+    static func runCommand(command: String, bottle: Bottle) {
         guard let resourcesURL = Bundle.main.url(forResource: "cabextract", withExtension: nil)?
             .deletingLastPathComponent() else { return }
-        // swiftlint:disable:next line_length
-        let winetricksCmd = #"PATH=\"\#(WhiskyWineInstaller.binFolder.path):\#(resourcesURL.path(percentEncoded: false)):$PATH\" WINE=wine WINEPREFIX=\"\#(bottle.url.path)\" \"\#(winetricksURL.path(percentEncoded: false))\" \#(command)"#
-
-        let script = """
-        tell application "Terminal"
-            activate
-            do script "\(winetricksCmd)"
-        end tell
-        """
-
-        var error: NSDictionary?
-        if let appleScript = NSAppleScript(source: script) {
-            appleScript.executeAndReturnError(&error)
-
-            if let error = error {
-                if let description = error["NSAppleScriptErrorMessage"] as? String {
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = String(localized: "alert.message")
-                        alert.informativeText = String(localized: "alert.info")
-                            + " \(command): "
-                            + description
-                        alert.alertStyle = .critical
-                        alert.addButton(withTitle: String(localized: "button.ok"))
-                        alert.runModal()
-                    }
-                }
-            }
+        let path = WhiskyWineInstaller.binFolder.path(percentEncoded: false) + ":"
+            + resourcesURL.path(percentEncoded: false)
+        let winetricks = [
+            "PATH=\(path.shellQuoted):\"$PATH\"",
+            "WINE=wine",
+            "WINEPREFIX=\(bottle.url.path(percentEncoded: false).shellQuoted)",
+            winetricksURL.path(percentEncoded: false).shellQuoted,
+            command.shellQuoted
+        ]
+        do {
+            try Terminal.run(winetricks.joined(separator: " "))
+        } catch {
+            let message = "Winetricks \(command): \(error.localizedDescription)"
+            ErrorAlert.show(String(localized: "alert.message"), message: message)
         }
     }
 

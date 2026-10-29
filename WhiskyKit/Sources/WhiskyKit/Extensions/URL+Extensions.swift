@@ -19,21 +19,18 @@
 import Foundation
 
 extension String {
-    public var esc: String {
-        let esc = ["\\", "\"", "'", " ", "(", ")", "[", "]", "{", "}", "&", "|",
-                   ";", "<", ">", "`", "$", "!", "*", "?", "#", "~", "="]
-        var str = self
-        for char in esc {
-            str = str.replacingOccurrences(of: char, with: "\\" + char)
-        }
-        return str
+    /// Quoted for a POSIX shell: single quotes, with any single quote written as '\''
+    public var shellQuoted: String {
+        "'" + replacingOccurrences(of: "'", with: #"'\''"#) + "'"
+    }
+
+    /// Quoted as an AppleScript string literal
+    public var appleScriptQuoted: String {
+        "\"" + replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
 }
 
 extension URL {
-    public var esc: String {
-        path.esc
-    }
 
     public func prettyPath() -> String {
         var prettyPath = path(percentEncoded: false)

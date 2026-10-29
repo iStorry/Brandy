@@ -62,9 +62,7 @@ struct WinetricksView: View {
 
                             let trick = winetricks.flatMap { $0.verbs }.first(where: { $0.id == selectedTrick })
                             if let trickName = trick?.name {
-                                Task.detached {
-                                    await Winetricks.runCommand(command: trickName, bottle: bottle)
-                                }
+                                Winetricks.runCommand(command: trickName, bottle: bottle)
                             }
                             dismiss()
                         }
