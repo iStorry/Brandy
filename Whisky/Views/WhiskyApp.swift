@@ -19,6 +19,7 @@
 import SwiftUI
 import Sparkle
 import WhiskyKit
+import os
 
 @main
 struct WhiskyApp: App {
@@ -56,7 +57,11 @@ struct WhiskyApp: App {
                     NSWindow.allowsAutomaticWindowTabbing = false
 
                     Task.detached {
-                        await WhiskyApp.deleteOldLogs()
+                        do {
+                            try WineLogs.prune()
+                        } catch {
+                            Logger.wineKit.error("Failed to prune logs: \(error)")
+                        }
                     }
                 }
         }
@@ -144,39 +149,7 @@ struct WhiskyApp: App {
     }
 
     static func openLogsFolder() {
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: Wine.logsFolder.path)
-    }
-
-    static func deleteOldLogs() {
-        let pastDate = Date().addingTimeInterval(-7 * 24 * 60 * 60)
-
-        guard let urls = try? FileManager.default.contentsOfDirectory(
-            at: Wine.logsFolder,
-            includingPropertiesForKeys: [.creationDateKey]) else {
-            return
-        }
-
-        let logs = urls.filter { url in
-            url.pathExtension == "log"
-        }
-
-        let oldLogs = logs.filter { url in
-            do {
-                let resourceValues = try url.resourceValues(forKeys: [.creationDateKey])
-
-                return resourceValues.creationDate ?? Date() < pastDate
-            } catch {
-                return false
-            }
-        }
-
-        for log in oldLogs {
-            do {
-                try FileManager.default.removeItem(at: log)
-            } catch {
-                print("Failed to delete log: \(error)")
-            }
-        }
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: WineLogs.folder.path)
     }
 
     static func wipeShaderCaches() {

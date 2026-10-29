@@ -30,7 +30,7 @@ public class Wine {
     /// Run a process on a executable file given by the `executableURL`
     private static func runProcess(
         name: String? = nil, args: [String], environment: [String: String], executableURL: URL, directory: URL? = nil,
-        fileHandle: FileHandle?
+        logFile: LogFile?
     ) throws -> AsyncStream<ProcessOutput> {
         let process = Process()
         process.executableURL = executableURL
@@ -40,29 +40,29 @@ public class Wine {
         process.qualityOfService = .userInitiated
 
         return try process.runStream(
-            name: name ?? args.joined(separator: " "), fileHandle: fileHandle
+            name: name ?? args.joined(separator: " "), logFile: logFile
         )
     }
 
     /// Run a `wine` process with the given arguments and environment variables returning a stream of output
     private static func runWineProcess(
         name: String? = nil, args: [String], environment: [String: String] = [:],
-        fileHandle: FileHandle?
+        logFile: LogFile?
     ) throws -> AsyncStream<ProcessOutput> {
         return try runProcess(
             name: name, args: args, environment: environment, executableURL: wineBinary,
-            fileHandle: fileHandle
+            logFile: logFile
         )
     }
 
     /// Run a `wineserver` process with the given arguments and environment variables returning a stream of output
     private static func runWineserverProcess(
         name: String? = nil, args: [String], environment: [String: String] = [:],
-        fileHandle: FileHandle?
+        logFile: LogFile?
     ) throws -> AsyncStream<ProcessOutput> {
         return try runProcess(
             name: name, args: args, environment: environment, executableURL: wineserverBinary,
-            fileHandle: fileHandle
+            logFile: logFile
         )
     }
 
@@ -70,14 +70,14 @@ public class Wine {
     public static func runWineProcess(
         name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:]
     ) throws -> AsyncStream<ProcessOutput> {
-        let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicaitonInfo()
-        fileHandle.writeInfo(for: bottle)
+        let logFile = try WineLogs.makeLogFile()
+        logFile.writeApplicationInfo()
+        logFile.writeInfo(for: bottle)
 
         return try runWineProcess(
             name: name, args: args,
             environment: constructWineEnvironment(for: bottle, environment: environment),
-            fileHandle: fileHandle
+            logFile: logFile
         )
     }
 
@@ -85,14 +85,14 @@ public class Wine {
     public static func runWineserverProcess(
         name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:]
     ) throws -> AsyncStream<ProcessOutput> {
-        let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicaitonInfo()
-        fileHandle.writeInfo(for: bottle)
+        let logFile = try WineLogs.makeLogFile()
+        logFile.writeApplicationInfo()
+        logFile.writeInfo(for: bottle)
 
         return try runWineserverProcess(
             name: name, args: args,
             environment: constructWineServerEnvironment(for: bottle, environment: environment),
-            fileHandle: fileHandle
+            logFile: logFile
         )
     }
 
@@ -171,16 +171,16 @@ public class Wine {
         _ args: [String], bottle: Bottle?, environment: [String: String] = [:]
     ) async throws -> String {
         var result: [String] = []
-        let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicaitonInfo()
+        let logFile = try WineLogs.makeLogFile()
+        logFile.writeApplicationInfo()
         var environment = environment
 
         if let bottle = bottle {
-            fileHandle.writeInfo(for: bottle)
+            logFile.writeInfo(for: bottle)
             environment = constructWineEnvironment(for: bottle, environment: environment)
         }
 
-        for await output in try runWineProcess(args: args, environment: environment, fileHandle: fileHandle) {
+        for await output in try runWineProcess(args: args, environment: environment, logFile: logFile) {
             switch output {
             case .started, .terminated:
                 break
@@ -264,23 +264,6 @@ enum RegistryType: String {
     case dword = "REG_DWORD"
     case qword = "REG_QWORD"
     case string = "REG_SZ"
-}
-
-extension Wine {
-    public static let logsFolder = FileManager.default.urls(
-        for: .libraryDirectory, in: .userDomainMask
-    )[0].appending(path: "Logs").appending(path: Bundle.whiskyBundleIdentifier)
-
-    public static func makeFileHandle() throws -> FileHandle {
-        if !FileManager.default.fileExists(atPath: Self.logsFolder.path) {
-            try FileManager.default.createDirectory(at: Self.logsFolder, withIntermediateDirectories: true)
-        }
-
-        let dateString = Date.now.ISO8601Format()
-        let fileURL = Self.logsFolder.appending(path: dateString).appendingPathExtension("log")
-        try "".write(to: fileURL, atomically: true, encoding: .utf8)
-        return try FileHandle(forWritingTo: fileURL)
-    }
 }
 
 extension Wine {

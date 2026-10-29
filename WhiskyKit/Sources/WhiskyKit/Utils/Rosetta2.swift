@@ -17,7 +17,6 @@
 //
 
 import Foundation
-import os.log
 
 public class Rosetta2 {
     private static let rosetta2RuntimeBin = "/Library/Apple/usr/libexec/oah/libRosettaRuntime"
@@ -28,31 +27,18 @@ public class Rosetta2 {
 
     public static func installRosetta() async throws -> Bool {
         let process = Process()
-        let fileHandle = try Wine.makeFileHandle()
-
-        process.launchPath = "/usr/sbin/softwareupdate"
+        process.executableURL = URL(filePath: "/usr/sbin/softwareupdate")
         process.arguments = ["--install-rosetta", "--agree-to-license"]
-        process.standardOutput = fileHandle
-        process.standardError = fileHandle
-        fileHandle.writeApplicaitonInfo()
-        fileHandle.writeInfo(for: process)
 
-        return try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { (process: Process) in
-                do {
-                    try fileHandle.close()
-                    continuation.resume(returning: process.terminationStatus == 0)
-                } catch {
-                    Logger.wineKit.error("Error while closing file handle: \(error)")
-                    continuation.resume(throwing: error)
-                }
-            }
+        let logFile = try WineLogs.makeLogFile()
+        logFile.writeApplicationInfo()
 
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: error)
+        var succeeded = false
+        for await output in try process.runStream(name: "softwareupdate", logFile: logFile) {
+            if case .terminated(let process) = output {
+                succeeded = process.terminationStatus == 0
             }
         }
+        return succeeded
     }
 }

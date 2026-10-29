@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import os
 import SemanticVersion
 
 enum BottleDataError: Error {
@@ -60,9 +61,36 @@ public struct BottleData: Codable {
     public init() {
         fileVersion = Self.currentVersion
 
-        if !decode() {
+        guard FileManager.default.fileExists(atPath: Self.bottleEntriesDir.path(percentEncoded: false)) else {
             encode()
+            return
         }
+
+        do {
+            let stored = try Self.read(from: Self.bottleEntriesDir)
+            guard stored.fileVersion == Self.currentVersion else {
+                throw BottleDataError.unsupportedFileVersion(stored.fileVersion)
+            }
+            self = stored
+        } catch {
+            // Starting from an empty list would overwrite the user's bottle list on the next change
+            Logger.wineKit.error("Unreadable bottle list: \(error)")
+            do {
+                try Self.setAsideUnreadableEntries()
+                encode()
+            } catch {
+                Logger.wineKit.error("Failed to set aside the unreadable bottle list: \(error)")
+            }
+        }
+    }
+
+    private static func setAsideUnreadableEntries() throws {
+        let backup = bottleEntriesDir
+            .deletingPathExtension()
+            .appendingPathExtension("unreadable-\(Date.now.ISO8601Format())")
+            .appendingPathExtension("plist")
+        try FileManager.default.moveItem(at: bottleEntriesDir, to: backup)
+        Logger.wineKit.error("Moved the unreadable bottle list to `\(backup.path(percentEncoded: false))`")
     }
 
     private init(paths: [URL]) {
@@ -109,20 +137,6 @@ public struct BottleData: Codable {
         try PropertyListDecoder().decode(BottleData.self, from: Data(contentsOf: entriesURL))
     }
 
-    @discardableResult
-    private mutating func decode() -> Bool {
-        do {
-            self = try Self.read(from: Self.bottleEntriesDir)
-            if self.fileVersion != Self.currentVersion {
-                print("Invalid file version \(self.fileVersion)")
-                return false
-            }
-            return true
-        } catch {
-            return false
-        }
-    }
-
     private func write() throws {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
@@ -131,13 +145,11 @@ public struct BottleData: Codable {
         try encoder.encode(self).write(to: Self.bottleEntriesDir)
     }
 
-    @discardableResult
-    private func encode() -> Bool {
+    private func encode() {
         do {
             try write()
-            return true
         } catch {
-            return false
+            Logger.wineKit.error("Failed to save the bottle list: \(error)")
         }
     }
 }

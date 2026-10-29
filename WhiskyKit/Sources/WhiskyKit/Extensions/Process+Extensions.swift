@@ -17,7 +17,7 @@
 //
 
 import Foundation
-import os.log
+import os
 
 public enum ProcessOutput: Hashable {
     case started(Process)
@@ -28,21 +28,34 @@ public enum ProcessOutput: Hashable {
 
 public extension Process {
     /// Run the process returning a stream output
-    func runStream(name: String, fileHandle: FileHandle?) throws -> AsyncStream<ProcessOutput> {
-        let stream = makeStream(name: name, fileHandle: fileHandle)
+    func runStream(name: String, logFile: LogFile?) throws -> AsyncStream<ProcessOutput> {
+        let stream = makeStream(name: name, logFile: logFile)
         self.logProcessInfo(name: name)
-        fileHandle?.writeInfo(for: self)
+        logFile?.writeInfo(for: self)
         try run()
         return stream
     }
 
-    private func makeStream(name: String, fileHandle: FileHandle?) -> AsyncStream<ProcessOutput> {
-        let pipe = Pipe()
+    /// The stream finishes once the process has exited and both pipes reached end of file,
+    /// because children (e.g. a game started by `wine start`) keep writing after the parent exits
+    private func makeStream(name: String, logFile: LogFile?) -> AsyncStream<ProcessOutput> {
+        let outputPipe = Pipe()
         let errorPipe = Pipe()
-        standardOutput = pipe
+        standardOutput = outputPipe
         standardError = errorPipe
 
         return AsyncStream<ProcessOutput> { continuation in
+            let openSources = OSAllocatedUnfairLock(initialState: 3)
+            let closeSource: @Sendable () -> Void = {
+                let remaining = openSources.withLock { count in
+                    count -= 1
+                    return count
+                }
+                guard remaining == 0 else { return }
+                logFile?.close()
+                continuation.finish()
+            }
+
             continuation.onTermination = { termination in
                 switch termination {
                 case .finished:
@@ -57,35 +70,39 @@ public extension Process {
 
             continuation.yield(.started(self))
 
-            pipe.fileHandleForReading.readabilityHandler = { pipe in
-                guard let line = pipe.nextLine() else { return }
-                continuation.yield(.message(line))
-                guard !line.isEmpty else { return }
-                Logger.wineKit.info("\(line, privacy: .public)")
-                fileHandle?.write(line: line)
-            }
-
-            errorPipe.fileHandleForReading.readabilityHandler = { pipe in
-                guard let line = pipe.nextLine() else { return }
-                continuation.yield(.error(line))
-                guard !line.isEmpty else { return }
-                Logger.wineKit.warning("\(line, privacy: .public)")
-                fileHandle?.write(line: line)
-            }
+            Self.forward(outputPipe, isError: false, logFile: logFile, continuation: continuation,
+                         onEndOfFile: closeSource)
+            Self.forward(errorPipe, isError: true, logFile: logFile, continuation: continuation,
+                         onEndOfFile: closeSource)
 
             terminationHandler = { (process: Process) in
-                do {
-                    _ = try pipe.fileHandleForReading.readToEnd()
-                    _ = try errorPipe.fileHandleForReading.readToEnd()
-                    try fileHandle?.close()
-                } catch {
-                    Logger.wineKit.error("Error while clearing data: \(error)")
-                }
-
                 process.logTermination(name: name)
                 continuation.yield(.terminated(process))
-                continuation.finish()
+                closeSource()
             }
+        }
+    }
+
+    private static func forward(
+        _ pipe: Pipe, isError: Bool, logFile: LogFile?,
+        continuation: AsyncStream<ProcessOutput>.Continuation, onEndOfFile: @escaping @Sendable () -> Void
+    ) {
+        pipe.fileHandleForReading.readabilityHandler = { handle in
+            guard let text = handle.readAvailableText() else {
+                // The handler keeps firing at end of file until it is removed, spinning a core
+                handle.readabilityHandler = nil
+                onEndOfFile()
+                return
+            }
+
+            if isError {
+                continuation.yield(.error(text))
+                Logger.wineKit.warning("\(text, privacy: .public)")
+            } else {
+                continuation.yield(.message(text))
+                Logger.wineKit.info("\(text, privacy: .public)")
+            }
+            logFile?.write(text)
         }
     }
 
@@ -120,12 +137,10 @@ public extension Process {
 }
 
 extension FileHandle {
-    func nextLine() -> String? {
-        guard let line = String(data: availableData, encoding: .utf8) else { return nil }
-        if !line.isEmpty {
-            return line
-        } else {
-            return nil
-        }
+    /// The text currently available, or `nil` at end of file
+    func readAvailableText() -> String? {
+        let data = availableData
+        guard !data.isEmpty else { return nil }
+        return String(bytes: data, encoding: .utf8) ?? "[\(data.count) bytes of non-UTF-8 output]\n"
     }
 }

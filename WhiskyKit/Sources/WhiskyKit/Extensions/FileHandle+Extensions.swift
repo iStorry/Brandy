@@ -17,8 +17,6 @@
 //
 
 import Foundation
-import os.log
-import SemanticVersion
 
 extension FileHandle {
     func extract<T>(_ type: T.Type, offset: UInt64 = 0) -> T? {
@@ -32,63 +30,5 @@ extension FileHandle {
         } catch {
             return nil
         }
-    }
-
-    func write(line: String) {
-        do {
-            guard let data = line.data(using: .utf8) else { return }
-            try write(contentsOf: data)
-        } catch {
-            Logger.wineKit.info("Failed to write line: \(error)")
-        }
-    }
-
-    // swiftlint:disable line_length
-    func writeApplicaitonInfo() {
-        var header = String()
-        let macOSVersion = ProcessInfo.processInfo.operatingSystemVersion
-
-        header += "Whisky Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "")\n"
-        header += "Date: \(ISO8601DateFormatter().string(from: Date.now))\n"
-        header += "macOS Version: \(macOSVersion.majorVersion).\(macOSVersion.minorVersion).\(macOSVersion.patchVersion)\n\n"
-        write(line: header)
-    }
-    // swiftlint:enable line_length
-
-    func writeInfo(for process: Process) {
-        var header = String()
-
-        if let arguments = process.arguments {
-            header += "Arguments: \(arguments.joined(separator: " "))\n\n"
-        }
-
-        if let environment = process.environment, !environment.isEmpty {
-            header += "Environment:\n\(environment as AnyObject)\n\n"
-        }
-
-        write(line: header)
-    }
-
-    func writeInfo(for bottle: Bottle) {
-        var header = String()
-        header += "Bottle Name: \(bottle.settings.name)\n"
-        header += "Bottle URL: \(bottle.url.path)\n\n"
-
-        if let version = WhiskyWineInstaller.whiskyWineVersion() {
-            header += "WhiskyWine Version: \(version.major).\(version.minor).\(version.patch)\n"
-        }
-        header += "Windows Version: \(bottle.settings.windowsVersion)\n"
-        header += "Enhanced Sync: \(bottle.settings.enhancedSync)\n\n"
-
-        header += "Metal HUD: \(bottle.settings.metalHud)\n"
-        header += "Metal Trace: \(bottle.settings.metalTrace)\n\n"
-
-        if bottle.settings.dxvk {
-            header += "DXVK: \(bottle.settings.dxvk)\n"
-            header += "DXVK Async: \(bottle.settings.dxvkAsync)\n"
-            header += "DXVK HUD: \(bottle.settings.dxvkHud)\n\n"
-        }
-
-        write(line: header)
     }
 }
