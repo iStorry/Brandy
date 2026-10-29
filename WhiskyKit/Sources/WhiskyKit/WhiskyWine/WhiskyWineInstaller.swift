@@ -21,15 +21,22 @@ import SemanticVersion
 
 public class WhiskyWineInstaller {
     /// The Whisky application folder
-    public static let applicationFolder = FileManager.default.urls(
-        for: .applicationSupportDirectory, in: .userDomainMask
-        )[0].appending(path: Bundle.whiskyBundleIdentifier)
+    public static let applicationFolder = applicationFolder(for: Bundle.whiskyBundleIdentifier)
 
-    /// The folder of all the libfrary files
-    public static let libraryFolder = applicationFolder.appending(path: "Libraries")
+    /// The folder of all the library files
+    public static let libraryFolder = libraryFolder(in: applicationFolder)
 
     /// URL to the installed `wine` `bin` directory
     public static let binFolder: URL = libraryFolder.appending(path: "Wine").appending(path: "bin")
+
+    static func applicationFolder(for bundleIdentifier: String) -> URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appending(path: bundleIdentifier)
+    }
+
+    static func libraryFolder(in applicationFolder: URL) -> URL {
+        applicationFolder.appending(path: "Libraries")
+    }
 
     public static func isWhiskyWineInstalled() -> Bool {
         return whiskyWineVersion() != nil

@@ -37,6 +37,15 @@ struct Whisky: ParsableCommand {
                       Shellenv.self
                       /*Install.self,
                       Uninstall.self*/])
+
+    static func main() {
+        do {
+            try UpstreamDataMigration.migrateIfNeeded()
+        } catch {
+            FileHandle.standardError.write(Data("Failed to migrate data from upstream Whisky: \(error)\n".utf8))
+        }
+        main(nil)
+    }
 }
 
 extension Whisky {

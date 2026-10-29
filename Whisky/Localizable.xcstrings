@@ -10069,6 +10069,26 @@
         }
       }
     },
+    "migration.error.message.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whisky will try again the next time it opens. %@"
+          }
+        }
+      }
+    },
+    "migration.error.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't Import Data from Upstream Whisky"
+          }
+        }
+      }
+    },
     "open.bottle" : {
       "localizations" : {
         "ar" : {
