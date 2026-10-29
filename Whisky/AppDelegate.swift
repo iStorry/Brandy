@@ -32,6 +32,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Matches the default SettingsView shows, which `UserDefaults.bool(forKey:)` would otherwise read as off
+        UserDefaults.standard.register(defaults: [SettingsView.killOnTerminateKey: true])
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !hasShownMoveToApplicationsAlert && !AppDelegate.insideAppsFolder {
             DispatchQueue.main.asyncAfter(deadline: .now()) {
@@ -43,8 +48,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if UserDefaults.standard.bool(forKey: "killOnTerminate") {
-            WhiskyApp.killBottles()
+        if UserDefaults.standard.bool(forKey: SettingsView.killOnTerminateKey) {
+            WhiskyApp.killBottlesBeforeExit()
         }
     }
 

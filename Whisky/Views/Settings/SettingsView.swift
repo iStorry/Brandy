@@ -20,8 +20,10 @@ import SwiftUI
 import WhiskyKit
 
 struct SettingsView: View {
+    static let killOnTerminateKey = "killOnTerminate"
+
     @AppStorage("SUEnableAutomaticChecks") var whiskyUpdate = true
-    @AppStorage("killOnTerminate") var killOnTerminate = true
+    @AppStorage(killOnTerminateKey) var killOnTerminate = true
     @AppStorage("checkWhiskyWineUpdates") var checkWhiskyWineUpdates = true
     @AppStorage(BottleData.defaultBottleLocationKey) var defaultBottleLocation = BottleData.defaultBottleDir
     @AppStorage("showAdvanced") var showAdvanced = false

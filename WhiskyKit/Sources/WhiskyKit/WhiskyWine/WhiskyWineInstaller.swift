@@ -43,6 +43,8 @@ public class WhiskyWineInstaller {
 
     /// The runtime major version this app runs; Wine's layout changes between majors
     public static let supportedMajorVersion = 3
+    /// The first runtime with everything this app relies on: 3.1 added the Steam web helper shim
+    private static let minimumVersion = SemanticVersion(3, 1, 0)
 
     /// Assets of the release for the supported major version, which `scripts/publish-whiskywine.sh` publishes
     private static let distributionURL: URL = {
@@ -71,9 +73,10 @@ public class WhiskyWineInstaller {
         return whiskyWineVersion() != nil
     }
 
-    /// Installed and of the major version this app runs, rather than an older runtime it cannot use
+    /// Installed, of the major version this app runs, and new enough to have everything it relies on
     public static func isSupportedRuntimeInstalled() -> Bool {
-        whiskyWineVersion()?.major == supportedMajorVersion
+        guard let version = whiskyWineVersion() else { return false }
+        return version.major == supportedMajorVersion && version >= minimumVersion
     }
 
     /// Downloads the runtime archive for `install(from:)`

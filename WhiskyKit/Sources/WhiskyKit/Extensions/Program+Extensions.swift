@@ -43,7 +43,8 @@ extension Program {
 
     /// Runs the program with its settings and returns once it, and anything it started, has exited
     public func launch() async throws {
-        let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
+        let arguments = try SteamInstaller.prepareLaunch(of: url, in: bottle)
+            + settings.arguments.split { $0.isWhitespace }.map(String.init)
         try await Wine.runProgram(at: url, args: arguments, bottle: bottle, environment: generateEnvironment())
     }
 

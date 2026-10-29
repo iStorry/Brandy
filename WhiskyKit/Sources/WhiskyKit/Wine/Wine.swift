@@ -138,6 +138,7 @@ public class Wine {
     }
 
     /// Run a `wineserver` command with the given arguments and return the output result
+    @discardableResult
     private static func runWineserver(_ args: [String], bottle: Bottle) async throws -> String {
         var result: [ProcessOutput] = []
 
@@ -198,10 +199,21 @@ public class Wine {
         return try await runWine(["cmd", "/c", url.path(percentEncoded: false)], bottle: bottle)
     }
 
-    public static func killBottle(bottle: Bottle) throws {
-        Task.detached(priority: .userInitiated) {
-            try await runWineserver(["-k"], bottle: bottle)
-        }
+    /// Stops every Windows program in the bottle and waits for its wineserver to exit
+    public static func stopAllProcesses(in bottle: Bottle) async throws {
+        try await runWineserver(["-k"], bottle: bottle)
+        try await runWineserver(["-w"], bottle: bottle)
+    }
+
+    /// Stops every Windows program in the bottle before returning, for when the app is quitting
+    /// and asynchronous work would never run
+    public static func stopAllProcessesBeforeExit(in bottle: Bottle) throws {
+        let process = Process()
+        process.executableURL = wineserverBinary
+        process.arguments = ["-k"]
+        process.environment = constructWineServerEnvironment(for: bottle)
+        try process.run()
+        process.waitUntilExit()
     }
 
     public static func enableDXVK(bottle: Bottle) throws {

@@ -236,7 +236,7 @@ struct OnboardingSheet: View {
         OnboardingView(model: model, finish: { openSteam in
             isPresented = false
             if openSteam, let bottle = model.steamBottle {
-                Program(url: SteamInstaller.steamExecutable(in: bottle), bottle: bottle).run()
+                SteamSession.session(for: bottle).open()
             }
         }, canCancel: true)
         .frame(width: 540, height: 500)

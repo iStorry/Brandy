@@ -73,7 +73,7 @@ struct HomeView: View {
             showAdvanced = true
         }
         if openSteam, let bottle = onboarding.steamBottle {
-            Program(url: SteamInstaller.steamExecutable(in: bottle), bottle: bottle).run()
+            SteamSession.session(for: bottle).open()
         }
         onboarding.reset()
     }
@@ -81,12 +81,12 @@ struct HomeView: View {
 
 struct SteamReadyView: View {
     let repair: () -> Void
+    @ObservedObject private var session: SteamSession
     @StateObject private var steam: Program
-    @State private var isRunning = false
-    @State private var launchError: String?
 
     init(bottle: Bottle, repair: @escaping () -> Void) {
         self.repair = repair
+        session = SteamSession.session(for: bottle)
         _steam = StateObject(wrappedValue: Program(url: SteamInstaller.steamExecutable(in: bottle), bottle: bottle))
     }
 
@@ -98,51 +98,42 @@ struct SteamReadyView: View {
                 Text("home.ready.title")
                     .font(.largeTitle)
                     .fontWeight(.semibold)
-                Text(isRunning ? "home.running" : "home.ready.subtitle")
+                Text(session.isRunning ? "home.running" : "home.ready.subtitle")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             Button {
-                openSteam()
+                session.open()
             } label: {
-                Label("home.openSteam", systemImage: "play.fill")
+                Label(session.isRunning ? "home.showSteam" : "home.openSteam", systemImage: "play.fill")
                     .frame(minWidth: 180)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.extraLarge)
             .keyboardShortcut(.defaultAction)
-            .disabled(isRunning)
             Spacer(minLength: 0)
             HStack(spacing: 6) {
                 Text("home.trouble")
                     .foregroundStyle(.secondary)
                 Button("home.repair", action: repair)
                     .buttonStyle(.link)
+                    .disabled(session.isRunning)
             }
             .font(.callout)
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            session.refresh()
+        }
         .alert("home.launchFailed", isPresented: isShowingLaunchError) {
         } message: {
-            Text(launchError ?? "")
+            Text(session.launchError ?? "")
         }
     }
 
     private var isShowingLaunchError: Binding<Bool> {
-        Binding(get: { launchError != nil }, set: { if !$0 { launchError = nil } })
-    }
-
-    private func openSteam() {
-        isRunning = true
-        Task {
-            do {
-                try await steam.launch()
-            } catch {
-                launchError = error.localizedDescription
-            }
-            isRunning = false
-        }
+        Binding(get: { session.launchError != nil }, set: { if !$0 { session.launchError = nil } })
     }
 }

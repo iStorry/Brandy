@@ -49,6 +49,7 @@ enum OnboardingStep: CaseIterable, Identifiable {
     case createBottle
     case downloadSteam
     case installSteam
+    case updateSteam
 
     var id: Self { self }
 
@@ -59,6 +60,7 @@ enum OnboardingStep: CaseIterable, Identifiable {
         case .createBottle: "onboarding.step.createBottle"
         case .downloadSteam: "onboarding.step.downloadSteam"
         case .installSteam: "onboarding.step.installSteam"
+        case .updateSteam: "onboarding.step.updateSteam"
         }
     }
 
@@ -69,6 +71,7 @@ enum OnboardingStep: CaseIterable, Identifiable {
         case .downloadRuntime, .downloadSteam: "onboarding.error.download"
         case .createBottle: "onboarding.error.createBottle"
         case .installSteam: "onboarding.error.installSteam"
+        case .updateSteam: "onboarding.error.updateSteam"
         }
     }
 }
@@ -182,6 +185,8 @@ final class OnboardingModel: ObservableObject {
             try await downloadSteam()
         case .installSteam:
             try await installSteam()
+        case .updateSteam:
+            try await updateSteam()
         }
     }
 
@@ -234,6 +239,15 @@ final class OnboardingModel: ObservableObject {
         let steam = SteamInstaller.steamExecutable(in: steamBottle)
         if !steamBottle.settings.pins.contains(where: { $0.url == steam }) {
             steamBottle.settings.pins.append(PinnedProgram(name: Self.steamBottleName, url: steam))
+        }
+    }
+
+    /// Steam updates itself on first launch; doing it here shows progress and lets the web helper shim go in
+    private func updateSteam() async throws {
+        guard let steamBottle else { throw OnboardingError.missingSteamBottle }
+        let report = reporter(for: .updateSteam)
+        try await SteamInstaller.completeFirstUpdate(in: steamBottle) { downloadedBytes in
+            report(DownloadProgress(receivedBytes: downloadedBytes, expectedBytes: nil))
         }
     }
 

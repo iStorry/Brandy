@@ -5,6 +5,7 @@
 #
 #  Assembles the WhiskyWine runtime (a `Libraries` folder) from pinned upstream releases.
 #  Every download is checked against a pinned SHA-256 or fetched at a pinned commit.
+#  Building the Steam web helper shim needs mingw-w64 (`brew install mingw-w64`).
 #  Publish the result with scripts/publish-whiskywine.sh.
 #
 #  Usage: scripts/build-whiskywine.sh <output-folder>
@@ -13,7 +14,7 @@
 set -euo pipefail
 
 readonly RUNTIME_MAJOR=3
-readonly RUNTIME_MINOR=0
+readonly RUNTIME_MINOR=1
 readonly RUNTIME_PATCH=0
 
 # Official WineHQ macOS package (Wine 11.0 stable), built by Gcenx/macOS_Wine_builds
@@ -28,6 +29,15 @@ readonly DXVK_FOLDER="dxvk-macOS-async-v1.10.3-20230507-repack"
 
 readonly WINETRICKS_COMMIT="f3890f670867b5ffbc3938726db45c0f7d16c8ba"
 readonly WINETRICKS_RAW="https://raw.githubusercontent.com/Winetricks/winetricks/$WINETRICKS_COMMIT"
+
+scripts_folder="$(cd "$(dirname "$0")" && pwd)"
+readonly SHIM_SOURCE="$scripts_folder/steamwebhelper-shim.c"
+readonly SHIM_COMPILER="x86_64-w64-mingw32-gcc"
+
+if ! command -v "$SHIM_COMPILER" > /dev/null; then
+    echo "$SHIM_COMPILER not found; install it with: brew install mingw-w64" >&2
+    exit 69
+fi
 
 if [[ $# -ne 1 ]]; then
     echo "Usage: $0 <output-folder>" >&2
@@ -67,6 +77,11 @@ curl -fL --retry 3 --silent --show-error -o "$libraries/winetricks" "$WINETRICKS
 curl -fL --retry 3 --silent --show-error -o "$libraries/verbs.txt" "$WINETRICKS_RAW/files/verbs/all.txt"
 chmod +x "$libraries/winetricks"
 
+echo "Building the Steam web helper shim"
+mkdir -p "$libraries/Steam"
+"$SHIM_COMPILER" -municode -mwindows -O2 -Wall -Wextra -Werror -static \
+    -o "$libraries/Steam/steamwebhelper-shim.exe" "$SHIM_SOURCE"
+
 version_file="$libraries/WhiskyWineVersion.plist"
 plutil -create xml1 "$version_file"
 plutil -insert version -dictionary "$version_file"
@@ -76,7 +91,8 @@ plutil -insert version.patch -integer "$RUNTIME_PATCH" "$version_file"
 plutil -insert version.preRelease -string "" "$version_file"
 plutil -insert version.build -string "" "$version_file"
 
-for required in Wine/bin/wine Wine/bin/wineserver DXVK/x64/d3d11.dll DXVK/x32/d3d11.dll winetricks verbs.txt; do
+for required in Wine/bin/wine Wine/bin/wineserver DXVK/x64/d3d11.dll DXVK/x32/d3d11.dll winetricks verbs.txt \
+    Steam/steamwebhelper-shim.exe; do
     if [[ ! -e "$libraries/$required" ]]; then
         echo "Missing $required" >&2
         exit 70

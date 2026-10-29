@@ -50,4 +50,84 @@ struct SteamInstallerTests {
 
         #expect(SteamInstaller.steamBottle(in: [games]) == nil)
     }
+
+    private func makeUpdatedSteam(in folder: TemporaryFolder) throws -> (bottle: Bottle, helpers: URL) {
+        let bottle = try makeBottle("Games", in: folder, withSteam: true)
+        let steam = SteamInstaller.steamExecutable(in: bottle).deletingLastPathComponent()
+        let helpers = steam.appending(path: "bin/cef/cef.win64")
+        try FileManager.default.createDirectory(at: helpers, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: steam.appending(path: "package"), withIntermediateDirectories: true)
+        try Data().write(to: steam.appending(path: "package/steam_client_win64.installed"))
+        try Data("Valve helper v1".utf8).write(to: helpers.appending(path: "steamwebhelper.exe"))
+        return (bottle, helpers)
+    }
+
+    private func makeShim(in folder: TemporaryFolder) throws -> URL {
+        let shim = folder.url.appending(path: "steamwebhelper-shim.exe")
+        try Data("MZ shim BRANDY-SHIM-1".utf8).write(to: shim)
+        return shim
+    }
+
+    private func contents(_ file: URL) throws -> String {
+        try String(contentsOf: file, encoding: .utf8)
+    }
+
+    @Test func detectsWhenTheFirstUpdateHasFinished() throws {
+        let folder = try TemporaryFolder()
+        let installedOnly = try makeBottle("Installed", in: folder, withSteam: true)
+        let (updated, _) = try makeUpdatedSteam(in: folder)
+
+        #expect(!SteamInstaller.isFirstUpdateComplete(in: installedOnly))
+        #expect(SteamInstaller.isFirstUpdateComplete(in: updated))
+    }
+
+    @Test func putsTheShimInFrontOfSteamsHelper() throws {
+        let folder = try TemporaryFolder()
+        let (bottle, helpers) = try makeUpdatedSteam(in: folder)
+        let shim = try makeShim(in: folder)
+
+        try SteamInstaller.installWebHelperShim(in: bottle, shim: shim)
+        try SteamInstaller.installWebHelperShim(in: bottle, shim: shim)
+
+        #expect(try contents(helpers.appending(path: "steamwebhelper.exe")) == "MZ shim BRANDY-SHIM-1")
+        #expect(try contents(helpers.appending(path: "steamwebhelper_real.exe")) == "Valve helper v1")
+    }
+
+    @Test func reinstallsTheShimAfterSteamReplacesIt() throws {
+        let folder = try TemporaryFolder()
+        let (bottle, helpers) = try makeUpdatedSteam(in: folder)
+        let shim = try makeShim(in: folder)
+        try SteamInstaller.installWebHelperShim(in: bottle, shim: shim)
+
+        try Data("Valve helper v2".utf8).write(to: helpers.appending(path: "steamwebhelper.exe"))
+        try SteamInstaller.installWebHelperShim(in: bottle, shim: shim)
+
+        #expect(try contents(helpers.appending(path: "steamwebhelper.exe")) == "MZ shim BRANDY-SHIM-1")
+        #expect(try contents(helpers.appending(path: "steamwebhelper_real.exe")) == "Valve helper v2")
+    }
+
+    @Test func failsClearlyWithoutTheShim() throws {
+        let folder = try TemporaryFolder()
+        let (bottle, _) = try makeUpdatedSteam(in: folder)
+
+        #expect {
+            try SteamInstaller.installWebHelperShim(in: bottle, shim: folder.url.appending(path: "missing.exe"))
+        } throws: { error in
+            guard case SteamInstallerError.webHelperShimMissing = error else { return false }
+            return true
+        }
+    }
+
+    @Test func addsLaunchArgumentsOnlyForSteam() throws {
+        let folder = try TemporaryFolder()
+        let bottle = try makeBottle("Installed", in: folder, withSteam: true)
+        let steam = SteamInstaller.steamExecutable(in: bottle)
+        let game = bottle.url.appending(path: "drive_c/Games/game.exe")
+        let differentCase = URL(filePath: steam.path(percentEncoded: false).replacingOccurrences(of: "steam.exe",
+                                                                                                 with: "Steam.exe"))
+
+        #expect(try SteamInstaller.prepareLaunch(of: game, in: bottle).isEmpty)
+        #expect(try SteamInstaller.prepareLaunch(of: steam, in: bottle) == ["-noverifyfiles"])
+        #expect(SteamInstaller.isSteam(differentCase, in: bottle))
+    }
 }

@@ -137,10 +137,23 @@ struct WhiskyApp: App {
 
     static func killBottles() {
         for bottle in BottleVM.shared.bottles {
+            Task {
+                do {
+                    try await Wine.stopAllProcesses(in: bottle)
+                } catch {
+                    Logger.wineKit.error("Failed to stop `\(bottle.settings.name)`: \(error)")
+                }
+            }
+        }
+    }
+
+    /// Stops every bottle before returning, since the app is about to exit
+    static func killBottlesBeforeExit() {
+        for bottle in BottleVM.shared.bottles where bottle.isAvailable {
             do {
-                try Wine.killBottle(bottle: bottle)
+                try Wine.stopAllProcessesBeforeExit(in: bottle)
             } catch {
-                print("Failed to kill bottle: \(error)")
+                Logger.wineKit.error("Failed to stop `\(bottle.settings.name)`: \(error)")
             }
         }
     }

@@ -8536,6 +8536,16 @@
         }
       }
     },
+    "home.showSteam" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Steam"
+          }
+        }
+      }
+    },
     "home.trouble" : {
       "localizations" : {
         "en" : {
@@ -9387,6 +9397,16 @@
         }
       }
     },
+    "onboarding.error.updateSteam" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steam's update didn't finish. Check that you're connected to the internet, then try again."
+          }
+        }
+      }
+    },
     "onboarding.setUpSteam" : {
       "localizations" : {
         "en" : {
@@ -9443,6 +9463,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Getting your Mac ready"
+          }
+        }
+      }
+    },
+    "onboarding.step.updateSteam" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updating Steam"
           }
         }
       }
