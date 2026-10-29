@@ -114,7 +114,8 @@ extension Bottle {
             Self.executables(in: driveC, excluding: hidden)
         }.value
 
-        let pinnedElsewhere = settings.pins.compactMap(\.url).filter { !installed.contains($0) }
+        let installedKeys = Set(installed.map(\.windowsPathKey))
+        let pinnedElsewhere = settings.pins.compactMap(\.url).filter { !installedKeys.contains($0.windowsPathKey) }
         programs = (installed + pinnedElsewhere)
             .map { Program(url: $0, bottle: self) }
             .sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -138,11 +139,11 @@ extension Bottle {
     @MainActor
     func move(destination: URL) {
         guard let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) else { return }
-        bottle.inFlight = true
+        bottle.activity = .moving
         do {
             try FileManager.default.moveItem(at: url, to: destination)
         } catch {
-            bottle.inFlight = false
+            bottle.activity = nil
             ErrorAlert.show(String(localized: "error.moveBottle"), error: error)
             return
         }
@@ -167,23 +168,36 @@ extension Bottle {
         try Tar.tar(folder: url, toURL: destination)
     }
 
+    /// Takes the bottle off the list and, if `delete`, deletes its folder first. A bottle with games
+    /// can be many gigabytes, so the folder is deleted in the background while the row shows it.
     @MainActor
     func remove(delete: Bool) {
-        let bottle = BottleVM.shared.bottles.first(where: { $0.url == url })
-        bottle?.inFlight = true
-        if delete {
+        guard delete else {
+            removeFromBottleList()
+            return
+        }
+
+        activity = .deleting
+        Task {
             do {
-                try FileManager.default.removeItem(at: url)
+                if !WineProcesses.processIDs(in: self).isEmpty {
+                    try await Wine.stopAllProcesses(in: self)
+                }
+                try await Task.detached(priority: .userInitiated) { [url] in
+                    try FileManager.default.removeItem(at: url)
+                }.value
             } catch {
-                bottle?.inFlight = false
+                activity = nil
                 ErrorAlert.show(String(localized: "error.removeBottle"), error: error)
                 return
             }
+            removeFromBottleList()
         }
+    }
 
-        if let path = BottleVM.shared.bottlesList.paths.firstIndex(of: url) {
-            BottleVM.shared.bottlesList.paths.remove(at: path)
-        }
+    @MainActor
+    private func removeFromBottleList() {
+        BottleVM.shared.bottlesList.paths.removeAll { $0 == url }
         BottleVM.shared.loadBottles()
     }
 
@@ -203,5 +217,16 @@ extension BottleSettings {
         if metalHud { enabled.append(String(localized: "config.metalHud")) }
         guard !enabled.isEmpty else { return String(localized: "config.summary.default") }
         return enabled.formatted(.list(type: .and, width: .narrow))
+    }
+}
+
+extension BottleActivity {
+    /// Shown in the sidebar row in place of the bottle's details
+    var statusText: String {
+        switch self {
+        case .creating: String(localized: "main.creatingBottle")
+        case .moving: String(localized: "main.movingBottle")
+        case .deleting: String(localized: "main.deletingBottle")
+        }
     }
 }

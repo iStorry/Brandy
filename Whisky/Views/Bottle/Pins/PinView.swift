@@ -29,6 +29,11 @@ struct PinView: View {
     @State private var name: String = ""
     @State private var opening: Bool = false
     @State private var hovered: Bool = false
+    @State private var isRunning: Bool = false
+
+    private var isSteam: Bool {
+        SteamInstaller.isSteam(program.url, in: bottle)
+    }
 
     var body: some View {
         PinTile(title: name, isHighlighted: hovered) {
@@ -48,9 +53,22 @@ struct PinView: View {
                     .opacity(hovered ? 1 : 0)
                     .help("button.run")
                 }
+                .overlay(alignment: .bottom) {
+                    if isRunning {
+                        Circle()
+                            .fill(.secondary)
+                            .frame(width: 5, height: 5)
+                            .offset(y: 8)
+                            .help("pin.running")
+                    }
+                }
         }
         .onHover { hovered = $0 }
         .help(program.displayLocation)
+        .onAppear(perform: refreshRunning)
+        .onReceive(RunningApplications.changes) { _ in
+            refreshRunning()
+        }
         .contextMenu {
             ProgramMenuView(program: program, path: $path)
 
@@ -93,6 +111,14 @@ struct PinView: View {
             }
         }
 
-        program.run()
+        if isSteam {
+            SteamSession.session(for: bottle).open()
+        } else {
+            program.run()
+        }
+    }
+
+    private func refreshRunning() {
+        isRunning = program.isRunning
     }
 }

@@ -42,6 +42,11 @@ public struct PinnedProgram: Codable, Hashable, Equatable {
         self.url = try container.decodeIfPresent(URL.self, forKey: .url)
         self.removable = try container.decodeIfPresent(Bool.self, forKey: .removable) ?? false
     }
+
+    /// Whether this pin opens `program`, however the case of its path is written
+    public func opens(_ program: URL) -> Bool {
+        url?.isSameWindowsPath(as: program) ?? false
+    }
 }
 
 public struct BottleInfo: Codable, Equatable {
@@ -123,7 +128,9 @@ public enum DXVKHUD: Codable, Equatable {
 }
 
 public struct BottleDXVKConfig: Codable, Equatable {
-    var dxvk: Bool = false
+    /// On unless turned off: the runtime has no other way to run Direct3D 10/11, which Wine's
+    /// own OpenGL-based Direct3D cannot do on macOS, so games such as Unity ones fail to start
+    var dxvk: Bool = true
     var dxvkAsync: Bool = true
     var dxvkHud: DXVKHUD = .off
 
@@ -131,7 +138,7 @@ public struct BottleDXVKConfig: Codable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.dxvk = try container.decodeIfPresent(Bool.self, forKey: .dxvk) ?? false
+        self.dxvk = try container.decodeIfPresent(Bool.self, forKey: .dxvk) ?? true
         self.dxvkAsync = try container.decodeIfPresent(Bool.self, forKey: .dxvkAsync) ?? true
         self.dxvkHud = try container.decodeIfPresent(DXVKHUD.self, forKey: .dxvkHud) ?? .off
     }

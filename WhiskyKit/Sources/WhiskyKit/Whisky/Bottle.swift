@@ -20,6 +20,13 @@ import Foundation
 import SwiftUI
 import os.log
 
+/// Long-running work on a bottle, during which it can't be opened
+public enum BottleActivity: Sendable {
+    case creating
+    case moving
+    case deleting
+}
+
 // swiftlint:disable:next todo
 // TODO: Should not be unchecked!
 public final class Bottle: ObservableObject, Equatable, Hashable, Identifiable, Comparable, @unchecked Sendable {
@@ -29,23 +36,24 @@ public final class Bottle: ObservableObject, Equatable, Hashable, Identifiable, 
         didSet { saveSettings() }
     }
     @Published public var programs: [Program] = []
-    @Published public var inFlight: Bool = false
+    @Published public var activity: BottleActivity?
     public var isAvailable: Bool = false
 
     /// All pins with their associated programs
     public var pinnedPrograms: [(pin: PinnedProgram, program: Program, // swiftlint:disable:this large_tuple
                                  id: String)] {
         return settings.pins.compactMap { pin in
-            let exists = FileManager.default.fileExists(atPath: pin.url?.path(percentEncoded: false) ?? "")
-            guard let program = programs.first(where: { $0.url == pin.url && exists }) else { return nil }
+            guard let pinURL = pin.url,
+                  FileManager.default.fileExists(atPath: pinURL.path(percentEncoded: false)),
+                  let program = programs.first(where: { $0.url.isSameWindowsPath(as: pinURL) }) else { return nil }
             return (pin, program, "\(pin.name)//\(program.url)")
         }
     }
 
-    public init(bottleUrl: URL, inFlight: Bool = false, isAvailable: Bool = false) {
+    public init(bottleUrl: URL, activity: BottleActivity? = nil, isAvailable: Bool = false) {
         let metadataURL = bottleUrl.appending(path: "Metadata").appendingPathExtension("plist")
         self.url = bottleUrl
-        self.inFlight = inFlight
+        self.activity = activity
         self.isAvailable = isAvailable
         self.metadataURL = metadataURL
 
@@ -59,11 +67,9 @@ public final class Bottle: ObservableObject, Equatable, Hashable, Identifiable, 
         }
 
         // Get rid of duplicates and pins that reference removed files
-        var found: Set<URL> = []
+        var found: Set<String> = []
         self.settings.pins = self.settings.pins.filter { pin in
-            guard let url = pin.url else { return false }
-            guard !found.contains(url) else { return false }
-            found.insert(url)
+            guard let url = pin.url, found.insert(url.windowsPathKey).inserted else { return false }
             let urlPath = url.path(percentEncoded: false)
             let volume: URL?
             do {

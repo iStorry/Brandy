@@ -24,6 +24,7 @@ public enum SteamInstallerError: LocalizedError {
     case webHelperMissing
     case webHelperShimMissing
     case firstUpdateStalled
+    case firstUpdateExited
 
     public var errorDescription: String? {
         switch self {
@@ -35,6 +36,8 @@ public enum SteamInstallerError: LocalizedError {
             return "The installed BrandyWine has no Steam web helper shim. Update BrandyWine, then try again."
         case .firstUpdateStalled:
             return "Steam's first update stopped downloading."
+        case .firstUpdateExited:
+            return "Steam closed before its first update finished."
         }
     }
 }
@@ -54,10 +57,14 @@ public enum SteamInstaller {
     private static let realWebHelperName = "steamwebhelper_real.exe"
     /// Embedded in the shim (scripts/steamwebhelper-shim.c) to tell it apart from Steam's helper
     private static let shimMarker = Data("BRANDY-SHIM-1".utf8)
-    /// Steam restores its own web helper when it verifies its files, replacing the shim
+    /// Steam restores its own web helper when it verifies its files, replacing the shim.
+    /// Never passed before the first update: verifying is what makes Steam download its client.
     private static let launchArguments = ["-noverifyfiles"]
     /// How long the first update may go without downloading anything before it counts as stalled
     private static let firstUpdateStallTimeout: Duration = .seconds(180)
+    /// How long Steam may be gone during the first update; it restarts itself once it has unpacked
+    private static let firstUpdateExitGrace: Duration = .seconds(30)
+    private static let firstUpdatePollInterval: Duration = .seconds(2)
 
     /// Built into the runtime by scripts/build-whiskywine.sh
     public static let webHelperShim = WhiskyWineInstaller.libraryFolder
@@ -93,9 +100,7 @@ public enum SteamInstaller {
 
     /// Whether `program` is the Steam client of its bottle
     public static func isSteam(_ program: URL, in bottle: Bottle) -> Bool {
-        program.standardizedFileURL.path(percentEncoded: false)
-            .caseInsensitiveCompare(steamExecutable(in: bottle).standardizedFileURL.path(percentEncoded: false))
-            == .orderedSame
+        program.isSameWindowsPath(as: steamExecutable(in: bottle))
     }
 
     public static func isInstalled(in bottle: Bottle) -> Bool {
@@ -131,13 +136,13 @@ public enum SteamInstaller {
 
     /// Runs Steam until its first self-update finishes, then stops it and installs the web helper shim.
     /// Steam reports no progress, so the size of its download folder is checked every few seconds.
+    /// Fails if Steam stops downloading or closes, e.g. after an error dialog, instead of waiting forever.
     public static func completeFirstUpdate(
         in bottle: Bottle, progress: @escaping @Sendable (_ downloadedBytes: Int64) -> Void
     ) async throws {
         if !isFirstUpdateComplete(in: bottle) {
             let steam = Task {
-                try await Wine.runWine([steamExecutable(in: bottle).path(percentEncoded: false)] + launchArguments,
-                                       bottle: bottle)
+                try await Wine.runWine([steamExecutable(in: bottle).path(percentEncoded: false)], bottle: bottle)
             }
             do {
                 try await waitForFirstUpdate(in: bottle, progress: progress)
@@ -157,8 +162,9 @@ public enum SteamInstaller {
         let downloads = steamFolder(in: bottle).appending(path: "package")
         var downloaded: Int64 = -1
         var lastGrowth = ContinuousClock.now
+        var lastSeenRunning = ContinuousClock.now
         while !isFirstUpdateComplete(in: bottle) {
-            try await Task.sleep(for: .seconds(2))
+            try await Task.sleep(for: firstUpdatePollInterval)
             let size = folderSize(downloads)
             if size != downloaded {
                 downloaded = size
@@ -166,6 +172,11 @@ public enum SteamInstaller {
                 progress(size)
             } else if ContinuousClock.now - lastGrowth > firstUpdateStallTimeout {
                 throw SteamInstallerError.firstUpdateStalled
+            }
+            if isRunning(in: bottle) {
+                lastSeenRunning = .now
+            } else if ContinuousClock.now - lastSeenRunning > firstUpdateExitGrace {
+                throw SteamInstallerError.firstUpdateExited
             }
         }
     }
@@ -218,12 +229,11 @@ public enum SteamInstaller {
         try Data(contentsOf: file, options: .alwaysMapped).range(of: shimMarker) != nil
     }
 
-    /// Arguments to add when starting `program`: for Steam, after making sure its interface can draw
-    public static func prepareLaunch(of program: URL, in bottle: Bottle) throws -> [String] {
-        guard isSteam(program, in: bottle) else { return [] }
-        if isFirstUpdateComplete(in: bottle) {
-            try installWebHelperShim(in: bottle)
-        }
+    /// Arguments to add when starting `program`: for Steam, after making sure its interface can draw.
+    /// Until the first update is done Steam starts plainly, so it downloads its client.
+    public static func prepareLaunch(of program: URL, in bottle: Bottle, shim: URL = webHelperShim) throws -> [String] {
+        guard isSteam(program, in: bottle), isFirstUpdateComplete(in: bottle) else { return [] }
+        try installWebHelperShim(in: bottle, shim: shim)
         return launchArguments
     }
 }

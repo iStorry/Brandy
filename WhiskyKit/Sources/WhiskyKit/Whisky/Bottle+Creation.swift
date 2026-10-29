@@ -55,7 +55,7 @@ extension Bottle {
 
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         do {
-            let bottle = Bottle(bottleUrl: url, inFlight: true)
+            let bottle = Bottle(bottleUrl: url, activity: .creating)
             whenStarted(bottle)
             bottle.settings.windowsVersion = windowsVersion
             bottle.settings.name = name
@@ -68,7 +68,7 @@ extension Bottle {
 
             let wineVersion = try await Wine.wineVersion()
             bottle.settings.wineVersion = SemanticVersion(wineVersion) ?? SemanticVersion(0, 0, 0)
-            bottle.inFlight = false
+            bottle.activity = nil
             return bottle
         } catch {
             removeIncompleteBottle(at: url)

@@ -101,7 +101,7 @@ struct PinCreationView: View {
         guard let newPinURL else { return }
 
         // Ensure this pin doesn't already exist
-        guard !bottle.settings.pins.contains(where: { $0.url == newPinURL })
+        guard !bottle.settings.pins.contains(where: { $0.opens(newPinURL) })
         else {
             isDuplicate = true
             return

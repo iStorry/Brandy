@@ -76,4 +76,8 @@ struct BottleSettingsTests {
         #expect(decoded.windowsVersion == .win11)
         #expect(!decoded.hasLegacyWindowsVersion)
     }
+
+    @Test func newBottlesUseDXVK() {
+        #expect(BottleSettings().dxvk)
+    }
 }
