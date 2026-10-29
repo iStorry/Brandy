@@ -6,7 +6,7 @@
 
   *Windows games on your Mac, set up in a few clicks*
 
-  ![](https://img.shields.io/github/actions/workflow/status/iStorry/Whisky/CI.yml?branch=main&style=for-the-badge)
+  ![](https://img.shields.io/github/actions/workflow/status/iStorry/Brandy/CI.yml?branch=main&style=for-the-badge)
 </div>
 
 ---

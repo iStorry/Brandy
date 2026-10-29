@@ -37,21 +37,23 @@ jobs:
       - name: Lint
         run: swiftlint --strict --reporter github-actions-logging
 
-      - name: Cache Swift packages
+      # Only the Git mirrors: a cached checkout missing a binary artifact (Sparkle.xcframework) is never
+      # downloaded again and fails the build, while checkouts and artifacts are quick to recreate
+      - name: Cache Swift package repositories
         uses: actions/cache@v6
         with:
-          path: .build/SourcePackages
-          key: spm-${{ hashFiles('Whisky.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'WhiskyKit/Package.swift') }}
+          path: .build/SourcePackages/repositories
+          key: spm-repositories-${{ hashFiles('Whisky.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'WhiskyKit/Package.swift') }}
 
       - name: Test WhiskyKit
         run: swift test --package-path WhiskyKit
 
       - name: Build Whisky
         run: xcodebuild build -project Whisky.xcodeproj -scheme Whisky -configuration Release
-          -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution
+          -clonedSourcePackagesDirPath .build/SourcePackages -onlyUsePackageVersionsFromResolvedFile
           CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
 
       - name: Build WhiskyCmd
         run: xcodebuild build -project Whisky.xcodeproj -scheme WhiskyCmd -configuration Release
-          -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution
+          -clonedSourcePackagesDirPath .build/SourcePackages -onlyUsePackageVersionsFromResolvedFile
           CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""

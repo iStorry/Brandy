@@ -48,7 +48,7 @@ public class WhiskyWineInstaller {
 
     /// Assets of the release for the supported major version, which `scripts/publish-whiskywine.sh` publishes
     private static let distributionURL: URL = {
-        let release = "https://github.com/iStorry/Whisky/releases/download/whiskywine-\(supportedMajorVersion)/"
+        let release = "https://github.com/iStorry/Brandy/releases/download/whiskywine-\(supportedMajorVersion)/"
         guard let url = URL(string: release) else {
             preconditionFailure("Invalid WhiskyWine distribution URL")
         }
