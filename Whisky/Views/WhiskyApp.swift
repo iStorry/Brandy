@@ -24,6 +24,7 @@ import os
 @main
 struct WhiskyApp: App {
     @State var showSetup: Bool = false
+    @AppStorage("showAdvanced") private var showAdvanced = false
     @State private var migrationError: Error?
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openURL) var openURL
@@ -46,24 +47,30 @@ struct WhiskyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(showSetup: $showSetup)
-                .frame(minWidth: ViewWidth.large, minHeight: 316)
-                .environmentObject(BottleVM.shared)
-                .alert("migration.error.title", isPresented: isShowingMigrationError) {
-                } message: {
-                    Text("migration.error.message.\(migrationError?.localizedDescription ?? "")")
+            Group {
+                if showAdvanced {
+                    ContentView(showSetup: $showSetup)
+                } else {
+                    HomeView(showSetup: $showSetup)
                 }
-                .onAppear {
-                    NSWindow.allowsAutomaticWindowTabbing = false
+            }
+            .frame(minWidth: ViewWidth.large, minHeight: 480)
+            .environmentObject(BottleVM.shared)
+            .alert("migration.error.title", isPresented: isShowingMigrationError) {
+            } message: {
+                Text("migration.error.message.\(migrationError?.localizedDescription ?? "")")
+            }
+            .onAppear {
+                NSWindow.allowsAutomaticWindowTabbing = false
 
-                    Task.detached {
-                        do {
-                            try WineLogs.prune()
-                        } catch {
-                            Logger.wineKit.error("Failed to prune logs: \(error)")
-                        }
+                Task.detached {
+                    do {
+                        try WineLogs.prune()
+                    } catch {
+                        Logger.wineKit.error("Failed to prune logs: \(error)")
                     }
                 }
+            }
         }
         // Don't ask me how this works, it just does
         .handlesExternalEvents(matching: ["{same path of URL?}"])

@@ -58,6 +58,25 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
     func loadBottles() {
         let bottlesInCreation = bottles.filter { $0.inFlight && !bottlesList.paths.contains($0.url) }
         bottles = bottlesList.loadBottles() + bottlesInCreation
+
+        for bottle in bottles where bottle.isAvailable && bottle.settings.hasLegacyWindowsVersion {
+            switchToSupportedWindowsVersion(bottle)
+        }
+    }
+
+    /// Bottles set to Windows XP–8.1 now read as Windows 10; this makes their Wine prefix match
+    @MainActor
+    private func switchToSupportedWindowsVersion(_ bottle: Bottle) {
+        let windowsVersion = bottle.settings.windowsVersion
+        Task {
+            do {
+                try await Wine.changeWinVersion(bottle: bottle, win: windowsVersion)
+                bottle.settings.windowsVersion = windowsVersion
+            } catch {
+                let name = bottle.settings.name
+                Logger.wineKit.error("Failed to switch `\(name)` to \(windowsVersion.pretty()): \(error)")
+            }
+        }
     }
 
     func countActive() -> Int {
@@ -70,19 +89,30 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
 
         Task {
             do {
-                try await setUpBottle(at: newBottleDir, name: bottleName, winVersion: winVersion)
+                try await createBottle(at: newBottleDir, name: bottleName, winVersion: winVersion)
             } catch {
-                Logger.wineKit.error("Failed to create bottle `\(bottleName)`: \(error)")
-                discardBottle(at: newBottleDir)
                 bottleCreationFailure = BottleCreationFailure(bottleName: bottleName, error: error)
             }
         }
         return newBottleDir
     }
 
+    /// Creates a bottle and waits for Wine to set it up, removing what was created if that fails
     @MainActor
-    private func setUpBottle(at bottleDir: URL, name: String, winVersion: WinVersion) async throws {
-        guard WhiskyWineInstaller.isWhiskyWineInstalled() else {
+    @discardableResult
+    func createBottle(at bottleDir: URL, name: String, winVersion: WinVersion) async throws -> Bottle {
+        do {
+            return try await setUpBottle(at: bottleDir, name: name, winVersion: winVersion)
+        } catch {
+            Logger.wineKit.error("Failed to create bottle `\(name)`: \(error)")
+            discardBottle(at: bottleDir)
+            throw error
+        }
+    }
+
+    @MainActor
+    private func setUpBottle(at bottleDir: URL, name: String, winVersion: WinVersion) async throws -> Bottle {
+        guard WhiskyWineInstaller.isSupportedRuntimeInstalled() else {
             throw BottleCreationError.whiskyWineNotInstalled
         }
         // Wine drops trailing dots when mapping Unix paths to Windows ones, so the prefix cannot load
@@ -106,6 +136,7 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
         bottle.settings.wineVersion = SemanticVersion(wineVer) ?? SemanticVersion(0, 0, 0)
         bottlesList.paths.append(bottleDir)
         loadBottles()
+        return bottles.first { $0.url == bottleDir } ?? bottle
     }
 
     @MainActor

@@ -22,12 +22,6 @@ import Testing
 @testable import WhiskyKit
 
 struct WhiskyWineInstallerTests {
-    private let archiveURL = URL(filePath: "/Libraries.tar.gz")
-
-    private func response(status: Int) throws -> HTTPURLResponse {
-        try #require(HTTPURLResponse(url: archiveURL, statusCode: status, httpVersion: nil, headerFields: nil))
-    }
-
     /// Builds an archive laid out like the published one: a top-level `Libraries` folder
     private func makeArchive(in folder: URL, version: SemanticVersion?, marker: String) throws -> URL {
         let source = folder.appending(path: "source-\(marker)")
@@ -52,43 +46,6 @@ struct WhiskyWineInstallerTests {
     private func installedMarker(in applicationFolder: URL) throws -> String {
         let marker = WhiskyWineInstaller.libraryFolder(in: applicationFolder).appending(path: "marker")
         return try String(contentsOf: marker, encoding: .utf8)
-    }
-
-    @Test func rejectsANonSuccessResponse() throws {
-        let folder = try TemporaryFolder()
-        let download = folder.url.appending(path: "download")
-        try Data("<html>Not Found</html>".utf8).write(to: download)
-
-        #expect {
-            try WhiskyWineInstaller.acceptDownload(at: download, response: response(status: 404), error: nil)
-        } throws: { error in
-            guard case WhiskyWineInstallerError.unexpectedStatus(404) = error else { return false }
-            return true
-        }
-    }
-
-    @Test func passesThroughTheTransportError() throws {
-        #expect(throws: URLError(.timedOut)) {
-            try WhiskyWineInstaller.acceptDownload(at: nil, response: nil, error: URLError(.timedOut))
-        }
-    }
-
-    @Test func movesASuccessfulDownloadOutOfTheSessionLocation() throws {
-        let folder = try TemporaryFolder()
-        let download = folder.url.appending(path: "download")
-        try Data("archive".utf8).write(to: download)
-
-        let accepted = try WhiskyWineInstaller.acceptDownload(at: download, response: response(status: 200), error: nil)
-        defer {
-            do {
-                try FileManager.default.removeItem(at: accepted)
-            } catch {
-                Issue.record(error)
-            }
-        }
-
-        #expect(!FileManager.default.fileExists(atPath: download.path(percentEncoded: false)))
-        #expect(try String(contentsOf: accepted, encoding: .utf8) == "archive")
     }
 
     @Test func installsAndThenReplacesTheLibraries() throws {

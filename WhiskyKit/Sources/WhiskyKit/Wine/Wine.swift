@@ -22,8 +22,8 @@ import os.log
 public class Wine {
     /// URL to the installed `DXVK` folder
     private static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
-    /// Path to the `wine64` binary
-    public static let wineBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wine64")
+    /// Path to the `wine` launcher, which runs both 32-bit and 64-bit programs
+    public static let wineBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wine")
     /// Parth to the `wineserver` binary
     private static let wineserverBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wineserver")
 
@@ -126,17 +126,7 @@ public class Wine {
     public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
         var cmd = """
         export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
-        export WINE=\"wine64\"
-        alias wine=\"wine64\"
-        alias winecfg=\"wine64 winecfg\"
-        alias msiexec=\"wine64 msiexec\"
-        alias regedit=\"wine64 regedit\"
-        alias regsvr32=\"wine64 regsvr32\"
-        alias wineboot=\"wine64 wineboot\"
-        alias wineconsole=\"wine64 wineconsole\"
-        alias winedbg=\"wine64 winedbg\"
-        alias winefile=\"wine64 winefile\"
-        alias winepath=\"wine64 winepath\"
+        export WINE=\"wine\"
         """
 
         let env = constructWineEnvironment(for: bottle, environment: constructWineEnvironment(for: bottle))

@@ -60,23 +60,11 @@ public struct BottleInfo: Codable, Equatable {
 }
 
 public enum WinVersion: String, CaseIterable, Codable, Sendable {
-    case winXP = "winxp64"
-    case win7 = "win7"
-    case win8 = "win8"
-    case win81 = "win81"
-    case win10 = "win10"
-    case win11 = "win11"
+    case win10
+    case win11
 
     public func pretty() -> String {
         switch self {
-        case .winXP:
-            return "Windows XP"
-        case .win7:
-            return "Windows 7"
-        case .win8:
-            return "Windows 8"
-        case .win81:
-            return "Windows 8.1"
         case .win10:
             return "Windows 10"
         case .win11:
@@ -85,16 +73,17 @@ public enum WinVersion: String, CaseIterable, Codable, Sendable {
     }
 }
 
-public enum EnhancedSync: Codable, Equatable {
-    case none, esync, msync
-}
-
 public struct BottleWineConfig: Codable, Equatable {
-    static let defaultWineVersion = SemanticVersion(7, 7, 0)
+    static let defaultWineVersion = SemanticVersion(11, 0, 0)
     var wineVersion: SemanticVersion = Self.defaultWineVersion
     var windowsVersion: WinVersion = .win10
-    var enhancedSync: EnhancedSync = .msync
     var avxEnabled: Bool = false
+    /// Set when the stored Windows version is one Whisky no longer offers, such as Windows 7
+    var migratedFromLegacyWindowsVersion = false
+
+    private enum CodingKeys: String, CodingKey {
+        case wineVersion, windowsVersion, avxEnabled
+    }
 
     public init() {}
 
@@ -102,9 +91,14 @@ public struct BottleWineConfig: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.wineVersion = try container.decodeIfPresent(SemanticVersion.self, forKey: .wineVersion) ?? Self.defaultWineVersion
-        self.windowsVersion = try container.decodeIfPresent(WinVersion.self, forKey: .windowsVersion) ?? .win10
-        self.enhancedSync = try container.decodeIfPresent(EnhancedSync.self, forKey: .enhancedSync) ?? .msync
         self.avxEnabled = try container.decodeIfPresent(Bool.self, forKey: .avxEnabled) ?? false
+
+        // A strict decode would fail the whole metadata file and reset the bottle's name and pins
+        let storedWindowsVersion = try container.decodeIfPresent(String.self, forKey: .windowsVersion)
+        self.windowsVersion = storedWindowsVersion.flatMap(WinVersion.init(rawValue:)) ?? .win10
+        if let storedWindowsVersion, WinVersion(rawValue: storedWindowsVersion) == nil {
+            self.migratedFromLegacyWindowsVersion = true
+        }
     }
     // swiftlint:enable line_length
 }
@@ -185,7 +179,16 @@ public struct BottleSettings: Codable, Equatable {
     /// The version of windows used by this bottle
     public var windowsVersion: WinVersion {
         get { return wineConfig.windowsVersion }
-        set { wineConfig.windowsVersion = newValue }
+        set {
+            wineConfig.windowsVersion = newValue
+            wineConfig.migratedFromLegacyWindowsVersion = false
+        }
+    }
+
+    /// The bottle was set to a Windows version Whisky no longer offers and now reads as Windows 10,
+    /// but its Wine prefix has not been switched yet
+    public var hasLegacyWindowsVersion: Bool {
+        wineConfig.migratedFromLegacyWindowsVersion
     }
 
     public var avxEnabled: Bool {
@@ -203,11 +206,6 @@ public struct BottleSettings: Codable, Equatable {
     public var blocklist: [URL] {
         get { return info.blocklist }
         set { info.blocklist = newValue }
-    }
-
-    public var enhancedSync: EnhancedSync {
-        get { return wineConfig.enhancedSync }
-        set { wineConfig.enhancedSync = newValue }
     }
 
     public var metalHud: Bool {
@@ -277,7 +275,6 @@ public struct BottleSettings: Codable, Equatable {
         try data.write(to: metadataUrl)
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
     public func environmentVariables(wineEnv: inout [String: String]) {
         if dxvk {
             wineEnv.updateValue("dxgi,d3d9,d3d10core,d3d11=n,b", forKey: "WINEDLLOVERRIDES")
@@ -295,19 +292,6 @@ public struct BottleSettings: Codable, Equatable {
 
         if dxvkAsync {
             wineEnv.updateValue("1", forKey: "DXVK_ASYNC")
-        }
-
-        switch enhancedSync {
-        case .none:
-            break
-        case .esync:
-            wineEnv.updateValue("1", forKey: "WINEESYNC")
-        case .msync:
-            wineEnv.updateValue("1", forKey: "WINEMSYNC")
-            // D3DM detects ESYNC and changes behaviour accordingly
-            // so we have to lie to it so that it doesn't break
-            // under MSYNC. Values hardcoded in lid3dshared.dylib
-            wineEnv.updateValue("1", forKey: "WINEESYNC")
         }
 
         if metalHud {

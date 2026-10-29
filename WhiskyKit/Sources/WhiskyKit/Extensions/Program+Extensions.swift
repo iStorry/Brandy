@@ -30,20 +30,21 @@ extension Program {
     }
 
     func runInWine() {
-        let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
-        let environment = generateEnvironment()
-
         Task.detached(priority: .userInitiated) {
             do {
-                try await Wine.runProgram(
-                    at: self.url, args: arguments, bottle: self.bottle, environment: environment
-                )
+                try await self.launch()
             } catch {
                 await MainActor.run {
                     self.showRunError(message: error.localizedDescription)
                 }
             }
         }
+    }
+
+    /// Runs the program with its settings and returns once it, and anything it started, has exited
+    public func launch() async throws {
+        let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
+        try await Wine.runProgram(at: url, args: arguments, bottle: bottle, environment: generateEnvironment())
     }
 
     public func generateTerminalCommand() -> String {

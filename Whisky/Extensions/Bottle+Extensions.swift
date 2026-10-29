@@ -65,42 +65,8 @@ extension Bottle {
 
     @discardableResult
     func getStartMenuPrograms() -> [Program] {
-        let globalStartMenu = url
-            .appending(path: "drive_c")
-            .appending(path: "ProgramData")
-            .appending(path: "Microsoft")
-            .appending(path: "Windows")
-            .appending(path: "Start Menu")
-
-        let userStartMenu = url
-            .appending(path: "drive_c")
-            .appending(path: "users")
-            .appending(path: "crossover")
-            .appending(path: "AppData")
-            .appending(path: "Roaming")
-            .appending(path: "Microsoft")
-            .appending(path: "Windows")
-            .appending(path: "Start Menu")
-
         var startMenuPrograms: [Program] = []
-        var linkURLs: [URL] = []
-        let globalEnumerator = FileManager.default.enumerator(at: globalStartMenu,
-                                                              includingPropertiesForKeys: [.isRegularFileKey],
-                                                              options: [.skipsHiddenFiles])
-        while let url = globalEnumerator?.nextObject() as? URL {
-            if url.pathExtension == "lnk" {
-                linkURLs.append(url)
-            }
-        }
-
-        let userEnumerator = FileManager.default.enumerator(at: userStartMenu,
-                                                            includingPropertiesForKeys: [.isRegularFileKey],
-                                                            options: [.skipsHiddenFiles])
-        while let url = userEnumerator?.nextObject() as? URL {
-            if url.pathExtension == "lnk" {
-                linkURLs.append(url)
-            }
-        }
+        var linkURLs = startMenuFolders.flatMap(Self.shortcuts(in:))
 
         linkURLs.sort(by: { $0.lastPathComponent.lowercased() < $1.lastPathComponent.lowercased() })
 
@@ -120,6 +86,38 @@ extension Bottle {
         }
 
         return startMenuPrograms
+    }
+
+    /// The shared Start Menu and the user's; Wine names the profile after the macOS user,
+    /// CrossOver-based runtimes named it `crossover`
+    private var startMenuFolders: [URL] {
+        let driveC = url.appending(path: "drive_c")
+        let shared = driveC.appending(path: "ProgramData")
+        let users = [NSUserName(), "crossover"].map { profile in
+            driveC
+                .appending(path: "users")
+                .appending(path: profile)
+                .appending(path: "AppData")
+                .appending(path: "Roaming")
+        }
+        return ([shared] + users).map { folder in
+            folder
+                .appending(path: "Microsoft")
+                .appending(path: "Windows")
+                .appending(path: "Start Menu")
+        }
+    }
+
+    private static func shortcuts(in folder: URL) -> [URL] {
+        let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey],
+                                                        options: [.skipsHiddenFiles])
+        var shortcuts: [URL] = []
+        while let url = enumerator?.nextObject() as? URL {
+            if url.pathExtension == "lnk" {
+                shortcuts.append(url)
+            }
+        }
+        return shortcuts
     }
 
     func updateInstalledPrograms() {
@@ -226,14 +224,9 @@ extension Bottle {
 }
 
 extension BottleSettings {
-    /// The settings that differ from a plain Wine prefix, e.g. `MSync, DXVK`
+    /// The settings that differ from a plain Wine prefix, e.g. `DXVK, AVX`
     var configurationSummary: String {
         var enabled: [String] = []
-        switch enhancedSync {
-        case .none: break
-        case .esync: enabled.append(String(localized: "config.enhacnedSync.esync"))
-        case .msync: enabled.append(String(localized: "config.enhacnedSync.msync"))
-        }
         if dxvk { enabled.append(String(localized: "config.dxvk")) }
         if avxEnabled { enabled.append(String(localized: "config.summary.avx")) }
         if metalHud { enabled.append(String(localized: "config.metalHud")) }

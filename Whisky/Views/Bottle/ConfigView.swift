@@ -80,14 +80,6 @@ struct ConfigView: View {
                         }
                     }
                 }
-                Picker(selection: $bottle.settings.enhancedSync) {
-                    Text("config.enhancedSync.none").tag(EnhancedSync.none)
-                    Text("config.enhacnedSync.esync").tag(EnhancedSync.esync)
-                    Text("config.enhacnedSync.msync").tag(EnhancedSync.msync)
-                } label: {
-                    Text("config.enhancedSync")
-                    Text("config.enhancedSync.info")
-                }
                 if #available(macOS 15, *) {
                     Toggle(isOn: $bottle.settings.avxEnabled) {
                         Text("config.avx")

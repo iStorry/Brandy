@@ -19,8 +19,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import WhiskyKit
-import SemanticVersion
-import os
 
 struct ContentView: View {
     @AppStorage("selectedBottleURL") private var selectedBottleURL: URL?
@@ -75,10 +73,10 @@ struct ContentView: View {
             BottleCreationView(newlyCreatedBottleURL: $newlyCreatedBottleURL)
         }
         .sheet(isPresented: $showSetup) {
-            SetupView(showSetup: $showSetup, firstTime: false)
+            OnboardingSheet(isPresented: $showSetup)
         }
         .sheet(isPresented: $showWhiskyWineUpdate) {
-            SetupView(showSetup: $showWhiskyWineUpdate, firstTime: false, initialPath: [.whiskyWineDownload])
+            OnboardingSheet(startingWith: .updateRuntime, isPresented: $showWhiskyWineUpdate)
         }
         .alert(
             "create.error.title",
@@ -112,10 +110,11 @@ struct ContentView: View {
                 }
             }
 
-            if !WhiskyWineInstaller.isWhiskyWineInstalled() {
+            if !WhiskyWineInstaller.isSupportedRuntimeInstalled() {
                 showSetup = true
+            } else {
+                showWhiskyWineUpdate = await WhiskyWineUpdate.offerIfAvailable()
             }
-            await offerWhiskyWineUpdate()
         }
     }
 
@@ -124,31 +123,6 @@ struct ContentView: View {
             get: { bottleVM.bottleCreationFailure != nil },
             set: { if !$0 { bottleVM.bottleCreationFailure = nil } }
         )
-    }
-
-    private func offerWhiskyWineUpdate() async {
-        let remoteVersion: SemanticVersion?
-        do {
-            remoteVersion = try await WhiskyWineInstaller.availableUpdate()
-        } catch {
-            Logger.wineKit.error("Failed to check for a WhiskyWine update: \(error)")
-            return
-        }
-        guard let remoteVersion else { return }
-
-        let alert = NSAlert()
-        alert.messageText = String(localized: "update.whiskywine.title")
-        alert.informativeText = String(format: String(localized: "update.whiskywine.description"),
-                                       String(WhiskyWineInstaller.whiskyWineVersion()
-                                              ?? SemanticVersion(0, 0, 0)),
-                                       String(remoteVersion))
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: String(localized: "update.whiskywine.update"))
-        alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            showWhiskyWineUpdate = true
-        }
     }
 
     var sidebar: some View {
