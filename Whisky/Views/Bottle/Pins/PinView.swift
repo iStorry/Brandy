@@ -25,43 +25,32 @@ struct PinView: View {
     @State var pin: PinnedProgram
     @Binding var path: NavigationPath
 
-    @State private var image: Image?
     @State private var showRenameSheet = false
     @State private var name: String = ""
     @State private var opening: Bool = false
+    @State private var hovered: Bool = false
 
     var body: some View {
-        VStack {
-            Group {
-                if let image = image {
-                    image
-                        .resizable()
-                } else {
-                    Image(systemName: "app.dashed")
-                        .resizable()
+        PinTile(title: name, isHighlighted: hovered) {
+            ProgramIconView(program: program, size: 48)
+                .scaleEffect(opening ? 1.6 : 1)
+                .opacity(opening ? 0 : 1)
+                .overlay(alignment: .bottomTrailing) {
+                    Button("button.run", systemImage: "play.circle.fill") {
+                        runProgram()
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .font(.title2)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, Color.accentColor)
+                    .offset(x: 6, y: 6)
+                    .opacity(hovered ? 1 : 0)
+                    .help("button.run")
                 }
-            }
-            .frame(width: 45, height: 45)
-            .scaleEffect(opening ? 2 : 1)
-            .opacity(opening ? 0 : 1)
-            Spacer()
-            Text(name)
-                .multilineTextAlignment(.center)
-                .lineLimit(2, reservesSpace: true)
         }
-        .frame(width: 90, height: 90)
-        .padding(10)
-        .overlay {
-            HStack {
-                Spacer()
-                Image(systemName: "play.fill")
-                    .resizable()
-                    .foregroundColor(.green)
-                    .frame(width: 16, height: 16)
-            }
-            .frame(width: 45, height: 45)
-            .padding(EdgeInsets(top: 0, leading: 0, bottom: 12, trailing: 0))
-        }
+        .onHover { hovered = $0 }
+        .help(program.displayLocation)
         .contextMenu {
             ProgramMenuView(program: program, path: $path)
 
@@ -82,14 +71,8 @@ struct PinView: View {
                 name = newName
             }
         }
-        .task {
+        .onAppear {
             name = pin.name
-            guard let peFile = program.peFile else { return }
-            let task = Task.detached {
-                guard let image = peFile.bestIcon() else { return nil as Image? }
-                return Image(nsImage: image)
-            }
-            self.image = await task.value
         }
         .onChange(of: name) {
             if let index = bottle.settings.pins.firstIndex(where: {

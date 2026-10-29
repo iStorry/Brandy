@@ -63,10 +63,6 @@ public final class Program: ObservableObject, Equatable, Hashable, Identifiable,
         self.settingsURL = settingsUrl
 
         do {
-            if !FileManager.default.fileExists(atPath: settingsFolder.path(percentEncoded: false)) {
-                try FileManager.default.createDirectory(at: settingsFolder, withIntermediateDirectories: true)
-            }
-
             self.settings = try ProgramSettings.decode(from: settingsUrl)
         } catch {
             Logger.wineKit.error("Failed to load settings for `\(name)`: \(error)")
@@ -90,7 +86,14 @@ public final class Program: ObservableObject, Equatable, Hashable, Identifiable,
 
     /// Save the settings to file
     private func saveSettings() {
+        // A program can outlive its bottle in the UI; saving must not recreate a deleted bottle's folder
+        guard FileManager.default.fileExists(atPath: bottle.url.path(percentEncoded: false)) else { return }
+
         do {
+            let settingsFolder = settingsURL.deletingLastPathComponent()
+            if !FileManager.default.fileExists(atPath: settingsFolder.path(percentEncoded: false)) {
+                try FileManager.default.createDirectory(at: settingsFolder, withIntermediateDirectories: false)
+            }
             try settings.encode(to: settingsURL)
         } catch {
             Logger.wineKit.error("Failed to save settings for `\(self.name)`: \(error)")

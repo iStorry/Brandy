@@ -273,6 +273,58 @@
         }
       }
     },
+    "bottle.more" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        }
+      }
+    },
+    "bottle.pinned" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "bottle.programCount.%lld" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld program"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld programs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "bottle.wineVersion.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wine %@"
+          }
+        }
+      }
+    },
     "button.cDrive" : {
       "localizations" : {
         "ar" : {
@@ -3266,6 +3318,16 @@
         }
       }
     },
+    "config.avx.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lets programs that require AVX instructions start."
+          }
+        }
+      }
+    },
     "config.avx.warning" : {
       "localizations" : {
         "ar" : {
@@ -3538,138 +3600,12 @@
         }
       }
     },
-    "config.controlPanel" : {
+    "config.buildVersion.info" : {
       "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "فتح لوحة التحكم"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otevřít Ovládací Panel"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åbn Kontrolpanel"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Systemsteuerung öffnen"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Control Panel"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Panel de Control"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avaa ohjauspaneeli"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ouvrir le Panneau de Configuration"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apri Pannello di controllo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コントロール パネルを開く"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "제어판 열기"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open configuratiescherm"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otwórz Panel Sterowania"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Painel de Controle"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Painel de Controlo"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deschide Panoul de Control"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Открыть Панель управления"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontrol Panelini Aç"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Відкрити Панель Керування"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở Control Panel"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开控制面板"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開啟控制台"
+            "value" : "Change only if a program asks for a newer Windows build."
           }
         }
       }
@@ -3806,6 +3742,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "DPI 縮放"
+          }
+        }
+      }
+    },
+    "config.dpi.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scales text and controls in Windows programs."
+          }
+        }
+      }
+    },
+    "config.dpi.value.%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld DPI"
           }
         }
       }
@@ -4352,6 +4308,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "非同步 DXVK"
+          }
+        }
+      }
+    },
+    "config.dxvk.async.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compiles shaders in the background to reduce stutter."
+          }
+        }
+      }
+    },
+    "config.dxvk.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Translates DirectX 9–11 to Vulkan. Try it if a game renders incorrectly."
           }
         }
       }
@@ -5444,6 +5420,16 @@
         }
       }
     },
+    "config.enhancedSync.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faster thread synchronization for games. MSync is recommended on macOS."
+          }
+        }
+      }
+    },
     "config.enhancedSync.none" : {
       "localizations" : {
         "ar" : {
@@ -5848,6 +5834,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Metal 抬頭顯示"
+          }
+        }
+      }
+    },
+    "config.metalHud.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows frame rate and GPU details over games."
           }
         }
       }
@@ -6260,142 +6256,6 @@
         }
       }
     },
-    "config.regedit" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "فتح محرر التسجيل"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otevřít editor databáze registrů"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åbn Registry Editor"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registry-Editor öffnen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Registry Editor"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Editor de Registro"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avaa rekisterin muokkain"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ouvrir l'Éditeur de Registre"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apri editor del Registro"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "レジストリ エディターを開く"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "레지스트리 편집기 열기"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Register Editor"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otwórz edytor rejestru"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Editor do Registro"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Editor de Registo"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deschide Editorul de Registre"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Открыть Редактор реестра"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kayıt Düzenleyicisi'ni Aç"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Відкрити Редактор Реєстру"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở Registry Editor"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开注册表编辑器"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開啟註冊表編輯器"
-          }
-        }
-      }
-    },
     "config.retinaMode" : {
       "localizations" : {
         "ar" : {
@@ -6528,6 +6388,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Retina 模式"
+          }
+        }
+      }
+    },
+    "config.retinaMode.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Render at full Retina resolution. Sharper, but slower in games."
+          }
+        }
+      }
+    },
+    "config.summary.avx" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AVX"
+          }
+        }
+      }
+    },
+    "config.summary.default" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default settings"
           }
         }
       }
@@ -6804,6 +6694,16 @@
         }
       }
     },
+    "config.title.tools" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wine Tools"
+          }
+        }
+      }
+    },
     "config.title.wine" : {
       "localizations" : {
         "ar" : {
@@ -6940,138 +6840,72 @@
         }
       }
     },
-    "config.winecfg" : {
+    "config.tool.controlPanel" : {
       "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "فتح تكوين Wine"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otevřít konfiguraci Wine"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åben Wine Konfiguration"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Öffne die Wine-Konfiguration"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Wine Configuration"
+            "value" : "Control Panel"
           }
-        },
-        "es" : {
+        }
+      }
+    },
+    "config.tool.controlPanel.info" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abrir configuración de Wine"
+            "value" : "Game controllers, sound and other Windows settings."
           }
-        },
-        "fi" : {
+        }
+      }
+    },
+    "config.tool.open" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa Wine konfiguraatio"
+            "value" : "Open"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "config.tool.regedit" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrir la configuration de Wine"
+            "value" : "Registry Editor"
           }
-        },
-        "it" : {
+        }
+      }
+    },
+    "config.tool.regedit.info" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apri configurazione Wine"
+            "value" : "View and edit this bottle's Windows registry."
           }
-        },
-        "ja" : {
+        }
+      }
+    },
+    "config.tool.winecfg" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wine 設定を開く"
+            "value" : "Wine Configuration"
           }
-        },
-        "ko" : {
+        }
+      }
+    },
+    "config.tool.winecfg.info" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wine 설정 열기"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Wine Configuratie"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otwórz konfigurację Wine"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Configuração do Wine"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir Configuração do Wine"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deschide Configurarea Wine"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Открыть конфигурацию Wine"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wine Yapılandırmasını Aç"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Відкрити налаштування Wine"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở cài đặt Wine"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开 Wine 配置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開啟Wine設定"
+            "value" : "Drives, graphics and library overrides."
           }
         }
       }
@@ -7208,6 +7042,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Windows 版本"
+          }
+        }
+      }
+    },
+    "config.winVersion.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Windows version that programs in this bottle see."
           }
         }
       }
@@ -8894,6 +8738,26 @@
         }
       }
     },
+    "environment.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No environment variables"
+          }
+        }
+      }
+    },
+    "environment.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set when this program starts, in addition to the bottle's settings."
+          }
+        }
+      }
+    },
     "environment.remove" : {
       "localizations" : {
         "ar" : {
@@ -9983,6 +9847,26 @@
         }
       }
     },
+    "main.bottleMissing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files not found"
+          }
+        }
+      }
+    },
+    "main.bottles" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bottles"
+          }
+        }
+      }
+    },
     "main.createFirst" : {
       "localizations" : {
         "ar" : {
@@ -10115,6 +9999,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立你的第一個容器以開始"
+          }
+        }
+      }
+    },
+    "main.creatingBottle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating…"
+          }
+        }
+      }
+    },
+    "main.empty.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Bottles"
+          }
+        }
+      }
+    },
+    "main.noSelection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Bottle Selected"
+          }
+        }
+      }
+    },
+    "main.noSelection.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a bottle in the sidebar."
           }
         }
       }
@@ -12209,7 +12133,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add to Blocklist"
+            "value" : "Hide"
           }
         },
         "es" : {
@@ -12345,7 +12269,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Selected to Blocklist"
+            "value" : "Hide Selected"
           }
         },
         "es" : {
@@ -12588,6 +12512,16 @@
         }
       }
     },
+    "program.args.prompt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        }
+      }
+    },
     "program.blocklist" : {
       "localizations" : {
         "ar" : {
@@ -12617,7 +12551,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Blocklist"
+            "value" : "Hidden"
           }
         },
         "es" : {
@@ -12720,6 +12654,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "黑名單"
+          }
+        }
+      }
+    },
+    "program.blocklist.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hidden programs don't appear in this list."
           }
         }
       }
@@ -12860,6 +12804,26 @@
         }
       }
     },
+    "program.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Programs"
+          }
+        }
+      }
+    },
+    "program.empty.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Programs you install in this bottle appear here."
+          }
+        }
+      }
+    },
     "program.env" : {
       "localizations" : {
         "ar" : {
@@ -12996,6 +12960,26 @@
         }
       }
     },
+    "program.launch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch"
+          }
+        }
+      }
+    },
+    "program.launch.info" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arguments are passed to the program each time it starts."
+          }
+        }
+      }
+    },
     "program.remove.blocklist" : {
       "localizations" : {
         "ar" : {
@@ -13025,7 +13009,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove from Blocklist"
+            "value" : "Show"
           }
         },
         "es" : {
@@ -13128,142 +13112,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "從黑名單中移除"
-          }
-        }
-      }
-    },
-    "program.remove.selected.blocklist" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إزالة من القائمة السوداء"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odstranit vybrané ze seznamu"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fjern valgte fra blokeringsliste"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ausgewählte Bottle von Sperrliste entfernen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove Selected from Blocklist"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminar seleccionados de la lista"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Poista valitut estolistalta"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enlever sélectionnés de la liste de programmes bloqués"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rimuovi selezionati dalla bloccati"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選択したものをブロックリストから削除"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "선택한 항목을 블랙리스트에서 제거"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verwijder geselecteerde uit blokkeerlijst"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usuń wybrane z czarnej listy"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove Selected from Blocklist"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remover Selecionados da Lista de Bloqueio"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminați cele selectate din Blocklist"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Убрать выделенное из черного списка"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seçilenleri Engelleme Listesinden Çıkar"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Видалити з чорного списку"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gỡ những mục được chọn khỏi danh sách chặn"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将所选内容从黑名单中移除"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將選擇項目移除出黑名單"
           }
         }
       }
@@ -18724,143 +18572,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "容器設定"
-          }
-        }
-      }
-    },
-    "tab.processes" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "العمليات قيد التشغيل"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spuštěné procesy"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kørende processer"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Laufende Prozesse"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Running Processes"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Procesos en ejecución"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Käynnissä olevat prosessit"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Processus en cours d'exécution"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Processi in esecuzione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "実行中のプロセス"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "실행중인 프로세스들"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lopende processen"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uruchamianie procesów"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Processos em Execução"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Processos em Execução"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Procese Active"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Запущенные процессы"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Çalışan İşlemler"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Запущені процеси"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tiến trình đang chạy"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "运行中进程"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在執行進程"
           }
         }
       }

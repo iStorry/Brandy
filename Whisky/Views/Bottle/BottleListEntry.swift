@@ -29,8 +29,9 @@ struct BottleListEntry: View {
     @State private var name: String = ""
 
     var body: some View {
-        Text(name)
-            .opacity(bottle.isAvailable ? 1.0 : 0.5)
+        BottleRowLabel(name: name, subtitle: subtitle,
+                       systemImage: bottle.isAvailable ? "wineglass" : "exclamationmark.triangle")
+            .foregroundStyle(bottle.isAvailable ? .primary : .secondary)
             .onChange(of: refresh, initial: true) {
                 name = bottle.settings.name
             }
@@ -99,6 +100,12 @@ struct BottleListEntry: View {
             }
     }
 
+    private var subtitle: String {
+        bottle.isAvailable
+            ? bottle.settings.windowsVersion.pretty()
+            : String(localized: "main.bottleMissing")
+    }
+
     func showRemoveAlert(bottle: Bottle) {
         let checkbox = NSButton(checkboxWithTitle: String(localized: "button.removeAlert.checkbox"),
                                 target: self, action: nil)
@@ -125,6 +132,29 @@ struct BottleListEntry: View {
                 bottle.remove(delete: checkbox.state == .on)
             }
         }
+    }
+}
+
+/// A sidebar row: the bottle's name above a short secondary line
+struct BottleRowLabel: View {
+    let name: String
+    let subtitle: String
+    let systemImage: String
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        } icon: {
+            Image(systemName: systemImage)
+        }
+        .padding(.vertical, 2)
     }
 }
 

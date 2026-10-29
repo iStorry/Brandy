@@ -22,6 +22,16 @@ import WhiskyKit
 import os.log
 
 extension Bottle {
+    /// Windows version, Wine version and program count, e.g. `Windows 10 · Wine 7.7 · 23 programs`
+    var summary: String {
+        let wineVersion = "\(settings.wineVersion.major).\(settings.wineVersion.minor)"
+        return [
+            settings.windowsVersion.pretty(),
+            String(localized: "bottle.wineVersion.\(wineVersion)"),
+            String(localized: "bottle.programCount.\(programs.count)")
+        ].joined(separator: " · ")
+    }
+
     func openCDrive() {
         NSWorkspace.shared.open(url.appending(path: "drive_c"))
     }
@@ -212,5 +222,22 @@ extension Bottle {
         alert.alertStyle = .critical
         alert.addButton(withTitle: String(localized: "button.ok"))
         alert.runModal()
+    }
+}
+
+extension BottleSettings {
+    /// The settings that differ from a plain Wine prefix, e.g. `MSync, DXVK`
+    var configurationSummary: String {
+        var enabled: [String] = []
+        switch enhancedSync {
+        case .none: break
+        case .esync: enabled.append(String(localized: "config.enhacnedSync.esync"))
+        case .msync: enabled.append(String(localized: "config.enhacnedSync.msync"))
+        }
+        if dxvk { enabled.append(String(localized: "config.dxvk")) }
+        if avxEnabled { enabled.append(String(localized: "config.summary.avx")) }
+        if metalHud { enabled.append(String(localized: "config.metalHud")) }
+        guard !enabled.isEmpty else { return String(localized: "config.summary.default") }
+        return enabled.formatted(.list(type: .and, width: .narrow))
     }
 }

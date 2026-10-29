@@ -47,12 +47,10 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
+                Button("button.createBottle", systemImage: "plus") {
                     showBottleCreation.toggle()
-                } label: {
-                    Image(systemName: "plus")
-                        .help("button.createBottle")
                 }
+                .help("button.createBottle")
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -156,16 +154,15 @@ struct ContentView: View {
     var sidebar: some View {
         ScrollViewReader { proxy in
             List(selection: $selected) {
-                Section {
+                Section("main.bottles") {
                     ForEach(filteredBottles) { bottle in
                         Group {
                             if bottle.inFlight {
-                                HStack {
-                                    Text(bottle.settings.name)
-                                    Spacer()
-                                    ProgressView().controlSize(.small)
-                                }
-                                .opacity(0.5)
+                                BottleRowLabel(name: bottle.settings.name,
+                                               subtitle: String(localized: "main.creatingBottle"),
+                                               systemImage: "wineglass")
+                                    .badge(Text(Image(systemName: "hourglass")))
+                                    .foregroundStyle(.secondary)
                             } else {
                                 BottleListEntry(bottle: bottle, selected: $selected, refresh: $triggerRefresh)
                                     .selectionDisabled(!bottle.isAvailable)
@@ -198,22 +195,22 @@ struct ContentView: View {
                     .disabled(bottle.inFlight)
                     .id(bottle.url)
             }
-        } else {
-            if (bottleVM.bottles.isEmpty || bottleVM.countActive() == 0) && bottlesLoaded {
-                VStack {
+        } else if bottlesLoaded {
+            if bottleVM.bottles.isEmpty || bottleVM.countActive() == 0 {
+                ContentUnavailableView {
+                    Label("main.empty.title", systemImage: "wineglass")
+                } description: {
                     Text("main.createFirst")
-                    Button {
+                } actions: {
+                    Button("button.createBottle") {
                         showBottleCreation.toggle()
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("button.createBottle")
-                        }
-                        .padding(6)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.accentColor)
+                    .controlSize(.large)
                 }
+            } else {
+                ContentUnavailableView("main.noSelection", systemImage: "sidebar.left",
+                                       description: Text("main.noSelection.description"))
             }
         }
     }

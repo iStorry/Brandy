@@ -22,25 +22,25 @@ import WhiskyKit
 struct PinAddView: View {
     let bottle: Bottle
     @State private var showingSheet = false
+    @State private var hovered = false
 
     var body: some View {
-        VStack {
-            Button {
-                showingSheet = true
-            } label: {
-                Image(systemName: "plus.circle")
-                    .resizable()
-                    .foregroundStyle(.secondary)
+        Button {
+            showingSheet = true
+        } label: {
+            PinTile(title: String(localized: "pin.help"), isHighlighted: hovered) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(.tertiary, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                    .overlay {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                    }
             }
-            .buttonStyle(.plain)
-            .frame(width: 45, height: 45)
-            Spacer()
-            Text("pin.help")
-                .multilineTextAlignment(.center)
-                .lineLimit(2, reservesSpace: true)
+            .foregroundStyle(.secondary)
         }
-        .frame(width: 90, height: 90)
-        .padding(10)
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
         .sheet(isPresented: $showingSheet) {
             PinCreationView(bottle: bottle)
         }

@@ -44,31 +44,21 @@ class Key: Identifiable {
 
 struct EnvironmentArgView: View {
     @ObservedObject var program: Program
-    @Binding var isExpanded: Bool
 
     @FocusState var focus: Focusable?
     @State private var environmentKeys: [Key] = []
     @State private var movedToIllegalKey = false
 
     var body: some View {
-        Section(isExpanded: $isExpanded) {
-            List(environmentKeys, id: \.id) { key in
+        Section {
+            if environmentKeys.isEmpty {
+                Text("environment.empty")
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(environmentKeys, id: \.id) { key in
                 KeyItem(focus: _focus,
                         environmentKeys: $environmentKeys,
                         key: key)
-            }
-            .alternatingRowBackgrounds(.enabled)
-            .onAppear {
-                let keys = program.settings.environment.map { (key: String, value: String) in
-                    return Key(key: key, value: value)
-                }
-                environmentKeys = keys.sorted(by: { $0.key < $1.key })
-            }
-            .onDisappear {
-                program.settings.environment.removeAll()
-                for key in environmentKeys where !key.key.isEmpty {
-                    program.settings.environment[key.key] = key.value
-                }
             }
         } header: {
             HStack {
@@ -77,9 +67,22 @@ struct EnvironmentArgView: View {
                 Button("environment.add", systemImage: "plus") {
                     createNewKey()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless)
                 .labelStyle(.titleAndIcon)
-                .opacity(isExpanded ? 1 : 0)
+            }
+        } footer: {
+            Text("environment.info")
+        }
+        .onAppear {
+            let keys = program.settings.environment.map { (key: String, value: String) in
+                return Key(key: key, value: value)
+            }
+            environmentKeys = keys.sorted(by: { $0.key < $1.key })
+        }
+        .onDisappear {
+            program.settings.environment.removeAll()
+            for key in environmentKeys where !key.key.isEmpty {
+                program.settings.environment[key.key] = key.value
             }
         }
         .onChange(of: focus) { oldValue, newValue in
