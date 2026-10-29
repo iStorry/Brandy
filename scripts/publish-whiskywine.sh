@@ -11,6 +11,8 @@
 
 set -euo pipefail
 
+# Must match WhiskyWineInstaller.distributionURL; this checkout also has the upstream remote
+readonly REPOSITORY="iStorry/Whisky"
 readonly RELEASE_TAG="whiskywine"
 readonly ARCHIVE_NAME="Libraries.tar.gz"
 readonly VERSION_FILE="WhiskyWineVersion.plist"
@@ -43,13 +45,13 @@ echo "Packaging WhiskyWine $version"
 COPYFILE_DISABLE=1 tar -zcf "$work/$ARCHIVE_NAME" -C "$(dirname "$libraries")" Libraries
 cp "$libraries/$VERSION_FILE" "$work/$VERSION_FILE"
 
-if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
-    gh release create "$RELEASE_TAG" --title "WhiskyWine runtime" --latest=false \
+if ! gh release view "$RELEASE_TAG" --repo "$REPOSITORY" > /dev/null 2>&1; then
+    gh release create "$RELEASE_TAG" --repo "$REPOSITORY" --title "WhiskyWine runtime" --latest=false \
         --notes "Wine runtime downloaded by Whisky during setup. Not an app release."
 fi
-gh release upload "$RELEASE_TAG" "$work/$ARCHIVE_NAME" "$work/$VERSION_FILE" --clobber
-gh release edit "$RELEASE_TAG" --notes "Wine runtime downloaded by Whisky during setup. Not an app release.
+gh release upload "$RELEASE_TAG" --repo "$REPOSITORY" "$work/$ARCHIVE_NAME" "$work/$VERSION_FILE" --clobber
+gh release edit "$RELEASE_TAG" --repo "$REPOSITORY" --notes "Wine runtime downloaded by Whisky during setup. Not an app release.
 
 Current version: $version"
 
-echo "Published WhiskyWine $version to the $RELEASE_TAG release"
+echo "Published WhiskyWine $version to the $RELEASE_TAG release of $REPOSITORY"
