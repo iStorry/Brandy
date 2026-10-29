@@ -1,4 +1,22 @@
 #!/usr/bin/env swift
+//
+//  generate-app-icon.swift
+//  Brandy
+//
+//  This file is part of Whisky.
+//
+//  Whisky is free software: you can redistribute it and/or modify it under the terms
+//  of the GNU General Public License as published by the Free Software Foundation,
+//  either version 3 of the License, or (at your option) any later version.
+//
+//  Whisky is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+//  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//  See the GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License along with Whisky.
+//  If not, see https://www.gnu.org/licenses/.
+//
+
 // Renders the Brandy app icon at every size the asset catalogs need.
 // Usage: swift scripts/generate-app-icon.swift   (run from the repository root)
 
@@ -26,11 +44,16 @@ struct Stratum {
 
 /// Ordered from the top band down, distilling from deep wine at the bottom to gold at the top.
 let strata: [Stratum] = [
-    Stratum(baseline: 470, amplitude: 34, wavelength: 760, phase: 0.6, topColor: 0xFFE3A2, bottomColor: 0xF5A947, crestColor: 0xFFF6DA),
-    Stratum(baseline: 568, amplitude: 38, wavelength: 700, phase: 2.2, topColor: 0xF6A443, bottomColor: 0xD0621D, crestColor: 0xFFD08A),
-    Stratum(baseline: 664, amplitude: 40, wavelength: 820, phase: 3.9, topColor: 0xD8502A, bottomColor: 0x9A2420, crestColor: 0xF38A5A),
-    Stratum(baseline: 758, amplitude: 36, wavelength: 740, phase: 5.3, topColor: 0x921A2A, bottomColor: 0x560B18, crestColor: 0xC8455A),
-    Stratum(baseline: 848, amplitude: 30, wavelength: 680, phase: 1.4, topColor: 0x5A0C1A, bottomColor: 0x2E040C, crestColor: 0x8E2238)
+    Stratum(baseline: 470, amplitude: 34, wavelength: 760, phase: 0.6,
+            topColor: 0xFFE3A2, bottomColor: 0xF5A947, crestColor: 0xFFF6DA),
+    Stratum(baseline: 568, amplitude: 38, wavelength: 700, phase: 2.2,
+            topColor: 0xF6A443, bottomColor: 0xD0621D, crestColor: 0xFFD08A),
+    Stratum(baseline: 664, amplitude: 40, wavelength: 820, phase: 3.9,
+            topColor: 0xD8502A, bottomColor: 0x9A2420, crestColor: 0xF38A5A),
+    Stratum(baseline: 758, amplitude: 36, wavelength: 740, phase: 5.3,
+            topColor: 0x921A2A, bottomColor: 0x560B18, crestColor: 0xC8455A),
+    Stratum(baseline: 848, amplitude: 30, wavelength: 680, phase: 1.4,
+            topColor: 0x5A0C1A, bottomColor: 0x2E040C, crestColor: 0x8E2238)
 ]
 
 let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
@@ -56,7 +79,8 @@ func fill(_ ctx: CGContext, _ path: CGPath, with gradient: CGGradient?, from sta
     ctx.saveGState()
     ctx.addPath(path)
     ctx.clip()
-    ctx.drawLinearGradient(gradient, start: start, end: end, options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+    ctx.drawLinearGradient(gradient, start: start, end: end,
+                           options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
     ctx.restoreGState()
 }
 
@@ -65,7 +89,8 @@ func fillRadial(_ ctx: CGContext, _ path: CGPath, with gradient: CGGradient?, ce
     ctx.saveGState()
     ctx.addPath(path)
     ctx.clip()
-    ctx.drawRadialGradient(gradient, startCenter: center, startRadius: 0, endCenter: center, endRadius: radius, options: [])
+    ctx.drawRadialGradient(gradient, startCenter: center, startRadius: 0,
+                           endCenter: center, endRadius: radius, options: [])
     ctx.restoreGState()
 }
 
@@ -77,27 +102,35 @@ func squirclePath(in rect: CGRect, exponent: CGFloat) -> CGPath {
         let angle = CGFloat(step) / CGFloat(steps) * 2 * .pi
         let cosine = cos(angle)
         let sine = sin(angle)
-        let x = pow(abs(cosine), 2 / exponent) * (cosine < 0 ? -1 : 1)
-        let y = pow(abs(sine), 2 / exponent) * (sine < 0 ? -1 : 1)
-        let point = CGPoint(x: rect.midX + x * rect.width / 2, y: rect.midY + y * rect.height / 2)
-        step == 0 ? path.move(to: point) : path.addLine(to: point)
+        let unitX = pow(abs(cosine), 2 / exponent) * (cosine < 0 ? -1 : 1)
+        let unitY = pow(abs(sine), 2 / exponent) * (sine < 0 ? -1 : 1)
+        let point = CGPoint(x: rect.midX + unitX * rect.width / 2, y: rect.midY + unitY * rect.height / 2)
+        if step == 0 {
+            path.move(to: point)
+        } else {
+            path.addLine(to: point)
+        }
     }
     path.closeSubpath()
     return path
 }
 
 extension Stratum {
-    func surfaceY(atX x: CGFloat) -> CGFloat {
-        let angle = 2 * .pi * x / wavelength + phase
+    func surfaceY(atX column: CGFloat) -> CGFloat {
+        let angle = 2 * .pi * column / wavelength + phase
         return baseline + amplitude * sin(angle) + amplitude * 0.3 * sin(angle * 2.1 + 1)
     }
 
     func crest() -> CGPath {
         let path = CGMutablePath()
         let range = stride(from: tileRect.minX - 20, through: tileRect.maxX + 20, by: 4)
-        for x in range {
-            let point = CGPoint(x: x, y: surfaceY(atX: x))
-            path.isEmpty ? path.move(to: point) : path.addLine(to: point)
+        for column in range {
+            let point = CGPoint(x: column, y: surfaceY(atX: column))
+            if path.isEmpty {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
         }
         return path
     }
@@ -131,12 +164,15 @@ func drawTile(_ ctx: CGContext, _ tile: CGPath) {
 func drawSun(_ ctx: CGContext, _ tile: CGPath) {
     fillRadial(
         ctx, tile,
-        with: gradient([(color(0xFFC36A, 0.55), 0), (color(0xF58A3A, 0.18), 0.45), (color(0xF58A3A, 0), 1)]),
+        with: gradient([
+            (color(0xFFC36A, 0.55), 0), (color(0xF58A3A, 0.18), 0.45), (color(0xF58A3A, 0), 1)
+        ]),
         center: sunCenter,
         radius: 330
     )
     let sun = CGPath(
-        ellipseIn: CGRect(x: sunCenter.x - sunRadius, y: sunCenter.y - sunRadius, width: sunRadius * 2, height: sunRadius * 2),
+        ellipseIn: CGRect(x: sunCenter.x - sunRadius, y: sunCenter.y - sunRadius,
+                          width: sunRadius * 2, height: sunRadius * 2),
         transform: nil
     )
     fill(
@@ -179,7 +215,9 @@ func drawTileEdge(_ ctx: CGContext) {
         .copy(strokingWithWidth: 3, lineCap: .round, lineJoin: .round, miterLimit: 10)
     fill(
         ctx, edge,
-        with: gradient([(color(0xFFE2C0, 0.22), 0), (color(0xFFE2C0, 0.03), 0.5), (color(0xFFE2C0, 0.08), 1)]),
+        with: gradient([
+            (color(0xFFE2C0, 0.22), 0), (color(0xFFE2C0, 0.03), 0.5), (color(0xFFE2C0, 0.08), 1)
+        ]),
         from: CGPoint(x: 512, y: tileRect.minY),
         to: CGPoint(x: 512, y: tileRect.maxY)
     )
