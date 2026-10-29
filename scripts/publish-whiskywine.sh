@@ -13,7 +13,7 @@
 set -euo pipefail
 
 # Must match WhiskyWineInstaller.distributionURL; this checkout also has the upstream remote
-readonly REPOSITORY="iStorry/Whisky"
+readonly REPOSITORY="iStorry/Brandy"
 readonly ARCHIVE_NAME="Libraries.tar.gz"
 readonly VERSION_FILE="WhiskyWineVersion.plist"
 
