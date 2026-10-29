@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+  SWIFTLINT_VERSION: 0.65.1
+  SWIFTLINT_SHA256: c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0
+
+jobs:
+  build:
+    name: Lint and Build
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install SwiftLint
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
+          echo "$SWIFTLINT_SHA256  $RUNNER_TEMP/swiftlint.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
+
+      - name: Lint
+        run: swiftlint --strict --reporter github-actions-logging
+
+      - name: Cache Swift packages
+        uses: actions/cache@v6
+        with:
+          path: .build/SourcePackages
+          key: spm-${{ hashFiles('Whisky.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'WhiskyKit/Package.swift') }}
+
+      - name: Build Whisky
+        run: xcodebuild build -project Whisky.xcodeproj -scheme Whisky -configuration Release
+          -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution
+          CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
+
+      - name: Build WhiskyCmd
+        run: xcodebuild build -project Whisky.xcodeproj -scheme WhiskyCmd -configuration Release
+          -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution
+          CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
