@@ -57,4 +57,23 @@ struct ProgramTests {
 
         #expect(!FileManager.default.fileExists(atPath: bottle.url.path(percentEncoded: false)))
     }
+
+    @Test func treatsPinsThatDifferOnlyInCaseAsOne() throws {
+        let folder = try TemporaryFolder()
+        let bottle = try makeBottle(in: folder)
+        let steamFolder = bottle.url.appending(path: "drive_c/Program Files (x86)/Steam")
+        try FileManager.default.createDirectory(at: steamFolder, withIntermediateDirectories: true)
+        try Data().write(to: steamFolder.appending(path: "Steam.exe"))
+        bottle.settings.pins = [
+            PinnedProgram(name: "Steam", url: steamFolder.appending(path: "steam.exe")),
+            PinnedProgram(name: "Steam", url: steamFolder.appending(path: "Steam.exe"))
+        ]
+
+        let reloaded = Bottle(bottleUrl: bottle.url, isAvailable: true)
+        let program = Program(url: steamFolder.appending(path: "Steam.exe"), bottle: reloaded)
+        program.pinned = true
+
+        #expect(reloaded.settings.pins.count == 1)
+        #expect(program.pinned)
+    }
 }

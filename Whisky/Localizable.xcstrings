@@ -9307,12 +9307,32 @@
         }
       }
     },
+    "main.deletingBottle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleting…"
+          }
+        }
+      }
+    },
     "main.empty.title" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "No Bottles"
+          }
+        }
+      }
+    },
+    "main.movingBottle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moving…"
           }
         }
       }
@@ -10798,6 +10818,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "程式路徑："
+          }
+        }
+      }
+    },
+    "pin.running" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Running"
           }
         }
       }

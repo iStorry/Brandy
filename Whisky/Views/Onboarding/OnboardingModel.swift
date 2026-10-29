@@ -207,17 +207,22 @@ final class OnboardingModel: ObservableObject {
         }.value
     }
 
+    /// Games started from Steam need DXVK for Direct3D 11, so it is turned on even for an existing bottle
     private func findOrCreateSteamBottle() async throws {
-        BottleVM.shared.loadBottles()
-        if let existing = SteamInstaller.steamBottle(in: BottleVM.shared.bottles)
-            ?? BottleVM.shared.bottles.first(where: { $0.isAvailable && $0.settings.name == Self.steamBottleName }) {
-            steamBottle = existing
-            return
-        }
+        let bottle = if let existing = existingSteamBottle() { existing } else { try await newSteamBottle() }
+        bottle.settings.dxvk = true
+        steamBottle = bottle
+    }
 
+    private func existingSteamBottle() -> Bottle? {
+        BottleVM.shared.loadBottles()
+        return SteamInstaller.steamBottle(in: BottleVM.shared.bottles)
+            ?? BottleVM.shared.bottles.first(where: { $0.isAvailable && $0.settings.name == Self.steamBottleName })
+    }
+
+    private func newSteamBottle() async throws -> Bottle {
         let location = BottleData.preferredBottleLocation.appending(path: UUID().uuidString)
-        steamBottle = try await BottleVM.shared.createBottle(at: location, name: Self.steamBottleName,
-                                                             winVersion: .win10)
+        return try await BottleVM.shared.createBottle(at: location, name: Self.steamBottleName, winVersion: .win10)
     }
 
     private func downloadSteam() async throws {
@@ -237,7 +242,7 @@ final class OnboardingModel: ObservableObject {
         }
 
         let steam = SteamInstaller.steamExecutable(in: steamBottle)
-        if !steamBottle.settings.pins.contains(where: { $0.url == steam }) {
+        if !steamBottle.settings.pins.contains(where: { $0.opens(steam) }) {
             steamBottle.settings.pins.append(PinnedProgram(name: Self.steamBottleName, url: steam))
         }
     }

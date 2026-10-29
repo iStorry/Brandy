@@ -143,15 +143,8 @@ struct BottleView: View {
 
         let startMenuPrograms = bottle.getStartMenuPrograms()
         for startMenuProgram in startMenuPrograms {
-            for program in bottle.programs where
-            // For some godforsaken reason "foo/bar" != "foo/Bar" so...
-            program.url.path().caseInsensitiveCompare(startMenuProgram.url.path()) == .orderedSame {
+            for program in bottle.programs where program.url.isSameWindowsPath(as: startMenuProgram.url) {
                 program.pinned = true
-                guard !bottle.settings.pins.contains(where: { $0.url == program.url }) else { continue }
-                bottle.settings.pins.append(PinnedProgram(
-                    name: program.url.deletingPathExtension().lastPathComponent,
-                    url: program.url
-                ))
             }
         }
     }

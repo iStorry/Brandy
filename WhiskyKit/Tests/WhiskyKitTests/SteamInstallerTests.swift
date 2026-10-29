@@ -118,16 +118,24 @@ struct SteamInstallerTests {
         }
     }
 
-    @Test func addsLaunchArgumentsOnlyForSteam() throws {
+    @Test func addsLaunchArgumentsOnlyForUpdatedSteam() throws {
         let folder = try TemporaryFolder()
-        let bottle = try makeBottle("Installed", in: folder, withSteam: true)
+        let (bottle, _) = try makeUpdatedSteam(in: folder)
+        let shim = try makeShim(in: folder)
         let steam = SteamInstaller.steamExecutable(in: bottle)
         let game = bottle.url.appending(path: "drive_c/Games/game.exe")
         let differentCase = URL(filePath: steam.path(percentEncoded: false).replacingOccurrences(of: "steam.exe",
                                                                                                  with: "Steam.exe"))
 
-        #expect(try SteamInstaller.prepareLaunch(of: game, in: bottle).isEmpty)
-        #expect(try SteamInstaller.prepareLaunch(of: steam, in: bottle) == ["-noverifyfiles"])
+        #expect(try SteamInstaller.prepareLaunch(of: game, in: bottle, shim: shim).isEmpty)
+        #expect(try SteamInstaller.prepareLaunch(of: steam, in: bottle, shim: shim) == ["-noverifyfiles"])
         #expect(SteamInstaller.isSteam(differentCase, in: bottle))
+    }
+
+    @Test func startsSteamPlainlyUntilItsFirstUpdate() throws {
+        let folder = try TemporaryFolder()
+        let bottle = try makeBottle("Installed", in: folder, withSteam: true)
+
+        #expect(try SteamInstaller.prepareLaunch(of: SteamInstaller.steamExecutable(in: bottle), in: bottle).isEmpty)
     }
 }

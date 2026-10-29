@@ -32,6 +32,16 @@ extension String {
 
 extension URL {
 
+    /// Windows ignores case in paths, so `Steam.exe` and `steam.exe` name the same program
+    public func isSameWindowsPath(as other: URL) -> Bool {
+        windowsPathKey == other.windowsPathKey
+    }
+
+    /// Equal for every spelling of the same Windows path
+    public var windowsPathKey: String {
+        standardizedFileURL.path(percentEncoded: false).lowercased()
+    }
+
     public func prettyPath() -> String {
         var prettyPath = path(percentEncoded: false)
         prettyPath = prettyPath

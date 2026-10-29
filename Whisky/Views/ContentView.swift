@@ -133,9 +133,9 @@ struct ContentView: View {
                 Section("main.bottles") {
                     ForEach(filteredBottles) { bottle in
                         Group {
-                            if bottle.inFlight {
+                            if let activity = bottle.activity {
                                 BottleRowLabel(name: bottle.settings.name,
-                                               subtitle: String(localized: "main.creatingBottle"),
+                                               subtitle: activity.statusText,
                                                systemImage: "wineglass")
                                     .badge(Text(Image(systemName: "hourglass")))
                                     .foregroundStyle(.secondary)
@@ -168,7 +168,7 @@ struct ContentView: View {
         if let bottle = selected {
             if let bottle = bottleVM.bottles.first(where: { $0.url == bottle }) {
                 BottleView(bottle: bottle)
-                    .disabled(bottle.inFlight)
+                    .disabled(bottle.activity != nil)
                     .id(bottle.url)
             }
         } else if bottlesLoaded {

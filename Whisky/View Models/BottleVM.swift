@@ -38,7 +38,7 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
     /// Bottles still being created are not in the bottle list yet, so they are kept across reloads
     @MainActor
     func loadBottles() {
-        let bottlesInCreation = bottles.filter { $0.inFlight && !bottlesList.paths.contains($0.url) }
+        let bottlesInCreation = bottles.filter { $0.activity == .creating && !bottlesList.paths.contains($0.url) }
         bottles = bottlesList.loadBottles() + bottlesInCreation
 
         for bottle in bottles where bottle.isAvailable && bottle.settings.hasLegacyWindowsVersion {

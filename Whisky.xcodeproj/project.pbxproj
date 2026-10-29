@@ -63,6 +63,7 @@
 		7A14B0D5D96E14098322DFC0 /* WhiskyWineUpdate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A3E5CD4F34E72EE880BF131 /* WhiskyWineUpdate.swift */; };
 		7AA2C89FB1934624B6FFA190 /* SteamSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACB6C31E47142A637015EA4 /* SteamSession.swift */; };
 		7A5E34BEDDA87936C50FB0A2 /* ErrorAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5CAFC811A7E1E60978D49E /* ErrorAlert.swift */; };
+		7C475A0F130182E5715D2E4C /* RunningApplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C30F92290954D9FE1EE36A8 /* RunningApplications.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -164,6 +165,7 @@
 		7A3E5CD4F34E72EE880BF131 /* WhiskyWineUpdate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiskyWineUpdate.swift; sourceTree = "<group>"; };
 		7ACB6C31E47142A637015EA4 /* SteamSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteamSession.swift; sourceTree = "<group>"; };
 		7A5CAFC811A7E1E60978D49E /* ErrorAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorAlert.swift; sourceTree = "<group>"; };
+		1C30F92290954D9FE1EE36A8 /* RunningApplications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningApplications.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -357,6 +359,7 @@
 				6763D8F52BC6314100651D27 /* Constants.swift */,
 				7A3E5CD4F34E72EE880BF131 /* WhiskyWineUpdate.swift */,
 				7A5CAFC811A7E1E60978D49E /* ErrorAlert.swift */,
+				1C30F92290954D9FE1EE36A8 /* RunningApplications.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -634,6 +637,7 @@
 				7A14B0D5D96E14098322DFC0 /* WhiskyWineUpdate.swift in Sources */,
 				7AA2C89FB1934624B6FFA190 /* SteamSession.swift in Sources */,
 				7A5E34BEDDA87936C50FB0A2 /* ErrorAlert.swift in Sources */,
+				7C475A0F130182E5715D2E4C /* RunningApplications.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
