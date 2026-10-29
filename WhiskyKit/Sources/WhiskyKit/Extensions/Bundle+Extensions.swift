@@ -22,4 +22,7 @@ public extension Bundle {
     static var whiskyBundleIdentifier: String {
         return Bundle.main.bundleIdentifier ?? "com.istorry.Whisky"
     }
+
+    /// The identifier upstream Whisky stored its data under, before this fork
+    internal static let upstreamWhiskyBundleIdentifier = "com.isaacmarovitz.Whisky"
 }

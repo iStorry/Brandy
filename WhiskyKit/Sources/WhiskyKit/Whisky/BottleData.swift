@@ -19,20 +19,36 @@
 import Foundation
 import SemanticVersion
 
+enum BottleDataError: Error {
+    case unsupportedFileVersion(SemanticVersion)
+}
+
 public struct BottleData: Codable {
-    public static let containerDir = FileManager.default.homeDirectoryForCurrentUser
-        .appending(path: "Library")
-        .appending(path: "Containers")
-        .appending(path: Bundle.whiskyBundleIdentifier)
+    public static let containerDir = containerDir(for: Bundle.whiskyBundleIdentifier)
+    public static let bottleEntriesDir = bottleEntriesDir(in: containerDir)
+    public static let defaultBottleDir = defaultBottleDir(in: containerDir)
 
-    public static let bottleEntriesDir = containerDir
-        .appending(path: "BottleVM")
-        .appendingPathExtension("plist")
-
-    public static let defaultBottleDir = containerDir
-        .appending(path: "Bottles")
+    /// `UserDefaults` key for the folder new bottles are created in
+    public static let defaultBottleLocationKey = "defaultBottleLocation"
 
     static let currentVersion = SemanticVersion(1, 0, 0)
+
+    static func containerDir(for bundleIdentifier: String) -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appending(path: "Library")
+            .appending(path: "Containers")
+            .appending(path: bundleIdentifier)
+    }
+
+    static func bottleEntriesDir(in containerDir: URL) -> URL {
+        containerDir
+            .appending(path: "BottleVM")
+            .appendingPathExtension("plist")
+    }
+
+    static func defaultBottleDir(in containerDir: URL) -> URL {
+        containerDir.appending(path: "Bottles")
+    }
 
     private var fileVersion: SemanticVersion
     public var paths: [URL] = [] {
@@ -47,6 +63,27 @@ public struct BottleData: Codable {
         if !decode() {
             encode()
         }
+    }
+
+    private init(paths: [URL]) {
+        fileVersion = Self.currentVersion
+        self.paths = paths
+    }
+
+    /// Appends the bottles listed in another bottle list that are not already in ours
+    static func importPaths(fromEntriesAt otherEntriesURL: URL) throws {
+        let other = try read(from: otherEntriesURL)
+        guard other.fileVersion == currentVersion else {
+            throw BottleDataError.unsupportedFileVersion(other.fileVersion)
+        }
+
+        let existingPaths = FileManager.default.fileExists(atPath: bottleEntriesDir.path(percentEncoded: false))
+            ? try read(from: bottleEntriesDir).paths
+            : []
+        let importedPaths = other.paths.filter { !existingPaths.contains($0) }
+        guard !importedPaths.isEmpty else { return }
+
+        try BottleData(paths: existingPaths + importedPaths).write()
     }
 
     public mutating func loadBottles() -> [Bottle] {
@@ -68,12 +105,14 @@ public struct BottleData: Codable {
         return bottles
     }
 
+    private static func read(from entriesURL: URL) throws -> BottleData {
+        try PropertyListDecoder().decode(BottleData.self, from: Data(contentsOf: entriesURL))
+    }
+
     @discardableResult
     private mutating func decode() -> Bool {
-        let decoder = PropertyListDecoder()
         do {
-            let data = try Data(contentsOf: Self.bottleEntriesDir)
-            self = try decoder.decode(BottleData.self, from: data)
+            self = try Self.read(from: Self.bottleEntriesDir)
             if self.fileVersion != Self.currentVersion {
                 print("Invalid file version \(self.fileVersion)")
                 return false
@@ -84,15 +123,18 @@ public struct BottleData: Codable {
         }
     }
 
-    @discardableResult
-    private func encode() -> Bool {
+    private func write() throws {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
 
+        try FileManager.default.createDirectory(at: Self.containerDir, withIntermediateDirectories: true)
+        try encoder.encode(self).write(to: Self.bottleEntriesDir)
+    }
+
+    @discardableResult
+    private func encode() -> Bool {
         do {
-            try FileManager.default.createDirectory(at: Self.containerDir, withIntermediateDirectories: true)
-            let data = try encoder.encode(self)
-            try data.write(to: Self.bottleEntriesDir)
+            try write()
             return true
         } catch {
             return false

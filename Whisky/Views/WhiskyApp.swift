@@ -23,6 +23,7 @@ import WhiskyKit
 @main
 struct WhiskyApp: App {
     @State var showSetup: Bool = false
+    @State private var migrationError: Error?
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openURL) var openURL
     private let updaterController: SPUStandardUpdaterController
@@ -31,6 +32,15 @@ struct WhiskyApp: App {
         updaterController = SPUStandardUpdaterController(startingUpdater: true,
                                                          updaterDelegate: nil,
                                                          userDriverDelegate: nil)
+        do {
+            try UpstreamDataMigration.migrateIfNeeded()
+        } catch {
+            _migrationError = State(initialValue: error)
+        }
+    }
+
+    private var isShowingMigrationError: Binding<Bool> {
+        Binding(get: { migrationError != nil }, set: { if !$0 { migrationError = nil } })
     }
 
     var body: some Scene {
@@ -38,6 +48,10 @@ struct WhiskyApp: App {
             ContentView(showSetup: $showSetup)
                 .frame(minWidth: ViewWidth.large, minHeight: 316)
                 .environmentObject(BottleVM.shared)
+                .alert("migration.error.title", isPresented: isShowingMigrationError) {
+                } message: {
+                    Text("migration.error.message.\(migrationError?.localizedDescription ?? "")")
+                }
                 .onAppear {
                     NSWindow.allowsAutomaticWindowTabbing = false
 
