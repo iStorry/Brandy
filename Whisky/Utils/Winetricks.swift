@@ -63,7 +63,6 @@ class Winetricks {
             appleScript.executeAndReturnError(&error)
 
             if let error = error {
-                print(error)
                 if let description = error["NSAppleScriptErrorMessage"] as? String {
                     await MainActor.run {
                         let alert = NSAlert()
@@ -80,17 +79,9 @@ class Winetricks {
         }
     }
 
-    static func parseVerbs() async -> [WinetricksCategory] {
-        // Grab the verbs file
+    static func parseVerbs() throws -> [WinetricksCategory] {
         let verbsURL = WhiskyWineInstaller.libraryFolder.appending(path: "verbs.txt")
-        let verbs: String = await { () async -> String in
-            do {
-                let (data, _) = try await URLSession.shared.data(from: verbsURL)
-                return String(data: data, encoding: .utf8) ?? String()
-            } catch {
-                return String()
-            }
-        }()
+        let verbs = try String(contentsOf: verbsURL, encoding: .utf8)
 
         // Read the file line by line
         let lines = verbs.components(separatedBy: "\n")

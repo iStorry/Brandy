@@ -121,14 +121,6 @@ public class WhiskyWineInstaller {
         }
     }
 
-    public static func uninstall() {
-        do {
-            try FileManager.default.removeItem(at: libraryFolder)
-        } catch {
-            print("Failed to uninstall WhiskyWine: \(error)")
-        }
-    }
-
     /// The newer WhiskyWine version available for download, or `nil` when the installed one is current
     public static func availableUpdate() async throws -> SemanticVersion? {
         guard let localVersion = whiskyWineVersion() else { return nil }

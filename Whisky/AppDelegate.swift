@@ -87,7 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 _ = try FileManager.default.replaceItemAt(AppDelegate.expectedUrl, withItemAt: appURL)
                 NSWorkspace.shared.open(AppDelegate.expectedUrl)
             } catch {
-                print("Failed to move the app: \(error)")
+                ErrorAlert.show(String(localized: "error.moveApp"), error: error)
             }
         }
     }

@@ -18,25 +18,7 @@
 
 import Foundation
 import os
-import SemanticVersion
 import WhiskyKit
-
-enum BottleCreationError: LocalizedError {
-    case whiskyWineNotInstalled
-    case unsupportedLocation(URL)
-    case prefixNotCreated(wineOutput: String)
-
-    var errorDescription: String? {
-        switch self {
-        case .whiskyWineNotInstalled:
-            return String(localized: "create.error.whiskyWineNotInstalled")
-        case .unsupportedLocation(let url):
-            return String(localized: "create.error.unsupportedLocation.\(url.prettyPath())")
-        case .prefixNotCreated(let wineOutput):
-            return String(localized: "create.error.prefixNotCreated.\(wineOutput.suffix(1000).description)")
-        }
-    }
-}
 
 struct BottleCreationFailure: Identifiable {
     let id = UUID()
@@ -97,58 +79,21 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
         return newBottleDir
     }
 
-    /// Creates a bottle and waits for Wine to set it up, removing what was created if that fails
+    /// Creates a bottle, shown in the list while Wine sets it up, and adds it to the bottle list
     @MainActor
     @discardableResult
     func createBottle(at bottleDir: URL, name: String, winVersion: WinVersion) async throws -> Bottle {
         do {
-            return try await setUpBottle(at: bottleDir, name: name, winVersion: winVersion)
+            let bottle = try await Bottle.create(at: bottleDir, name: name, windowsVersion: winVersion) { bottle in
+                bottles.append(bottle)
+            }
+            bottlesList.paths.append(bottleDir)
+            loadBottles()
+            return bottles.first { $0.url == bottleDir } ?? bottle
         } catch {
             Logger.wineKit.error("Failed to create bottle `\(name)`: \(error)")
-            discardBottle(at: bottleDir)
+            bottles.removeAll { $0.url == bottleDir }
             throw error
-        }
-    }
-
-    @MainActor
-    private func setUpBottle(at bottleDir: URL, name: String, winVersion: WinVersion) async throws -> Bottle {
-        guard WhiskyWineInstaller.isSupportedRuntimeInstalled() else {
-            throw BottleCreationError.whiskyWineNotInstalled
-        }
-        // Wine drops trailing dots when mapping Unix paths to Windows ones, so the prefix cannot load
-        guard !bottleDir.pathComponents.contains(where: { $0.hasSuffix(".") }) else {
-            throw BottleCreationError.unsupportedLocation(bottleDir)
-        }
-
-        try FileManager.default.createDirectory(at: bottleDir, withIntermediateDirectories: true)
-        let bottle = Bottle(bottleUrl: bottleDir, inFlight: true)
-        bottles.append(bottle)
-
-        bottle.settings.windowsVersion = winVersion
-        bottle.settings.name = name
-        let wineOutput = try await Wine.changeWinVersion(bottle: bottle, win: winVersion)
-        guard FileManager.default.fileExists(atPath: bottleDir.appending(path: "drive_c").path(percentEncoded: false))
-        else {
-            throw BottleCreationError.prefixNotCreated(wineOutput: wineOutput)
-        }
-
-        let wineVer = try await Wine.wineVersion()
-        bottle.settings.wineVersion = SemanticVersion(wineVer) ?? SemanticVersion(0, 0, 0)
-        bottlesList.paths.append(bottleDir)
-        loadBottles()
-        return bottles.first { $0.url == bottleDir } ?? bottle
-    }
-
-    @MainActor
-    private func discardBottle(at bottleDir: URL) {
-        bottles.removeAll { $0.url == bottleDir }
-        guard FileManager.default.fileExists(atPath: bottleDir.path(percentEncoded: false)) else { return }
-        do {
-            try FileManager.default.removeItem(at: bottleDir)
-        } catch {
-            Logger.wineKit.error(
-                "Failed to remove incomplete bottle `\(bottleDir.path(percentEncoded: false))`: \(error)"
-            )
         }
     }
 }

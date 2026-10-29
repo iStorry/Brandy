@@ -82,6 +82,9 @@ struct ProgramsView: View {
         .onChange(of: bottle.settings) {
             loadData()
         }
+        .onChange(of: bottle.programs) {
+            loadData()
+        }
     }
 
     private func programRows(_ programs: [Program]) -> some View {

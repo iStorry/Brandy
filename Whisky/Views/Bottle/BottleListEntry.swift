@@ -83,7 +83,11 @@ struct BottleListEntry: View {
                         if result == .OK {
                             if let url = panel.url {
                                 Task.detached(priority: .background) {
-                                    bottle.exportAsArchive(destination: url)
+                                    do {
+                                        try bottle.exportAsArchive(destination: url)
+                                    } catch {
+                                        await ErrorAlert.show(String(localized: "error.exportBottle"), error: error)
+                                    }
                                 }
                             }
                         }

@@ -23,7 +23,6 @@ import WhiskyKit
 enum BottleStage {
     case config
     case programs
-    case processes
 }
 
 struct BottleView: View {
@@ -86,8 +85,8 @@ struct BottleView: View {
                     .help("bottle.more")
                 }
             }
-            .onAppear {
-                updateStartMenu()
+            .task {
+                await updateStartMenu()
             }
             .disabled(!bottle.isAvailable)
             .navigationTitle(bottle.settings.name)
@@ -107,8 +106,6 @@ struct BottleView: View {
                     ProgramsView(
                         bottle: bottle, path: $path
                     )
-                case .processes:
-                    RunningProcessesView(bottle: bottle)
                 }
             }
             .navigationDestination(for: Program.self) { program in
@@ -131,22 +128,18 @@ struct BottleView: View {
             programLoading = true
             Task(priority: .userInitiated) {
                 do {
-                    if url.pathExtension == "bat" {
-                        try await Wine.runBatchFile(url: url, bottle: bottle)
-                    } else {
-                        try await Wine.runProgram(at: url, bottle: bottle)
-                    }
+                    try await Wine.runFile(at: url, bottle: bottle)
                 } catch {
-                    print("Failed to run external program: \(error)")
+                    ErrorAlert.show(String(localized: "error.runProgram"), error: error)
                 }
                 programLoading = false
-                updateStartMenu()
+                await updateStartMenu()
             }
         }
     }
 
-    private func updateStartMenu() {
-        bottle.updateInstalledPrograms()
+    private func updateStartMenu() async {
+        await bottle.updateInstalledPrograms()
 
         let startMenuPrograms = bottle.getStartMenuPrograms()
         for startMenuProgram in startMenuPrograms {

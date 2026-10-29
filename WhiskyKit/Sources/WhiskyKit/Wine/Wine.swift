@@ -199,6 +199,15 @@ public class Wine {
         return try await runWine(["cmd", "/c", url.path(percentEncoded: false)], bottle: bottle)
     }
 
+    /// Runs a program, installer or batch file the person picked
+    public static func runFile(at url: URL, bottle: Bottle) async throws {
+        if url.pathExtension.lowercased() == "bat" {
+            try await runBatchFile(url: url, bottle: bottle)
+        } else {
+            try await runProgram(at: url, bottle: bottle)
+        }
+    }
+
     /// Stops every Windows program in the bottle and waits for its wineserver to exit
     public static func stopAllProcesses(in bottle: Bottle) async throws {
         try await runWineserver(["-k"], bottle: bottle)

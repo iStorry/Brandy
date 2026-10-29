@@ -103,7 +103,8 @@ public struct LinkInfo: Hashable {
             try handle.seek(toOffset: offset)
             if let pathData = try handle.readToEnd() {
                 if let nullRange = pathData.firstIndex(of: 0) {
-                    let encoding: String.Encoding = unicode ? .utf16 : .windowsCP1254
+                    // Non-Unicode shortcuts store the path in the ANSI code page, Windows-1252 on Western systems
+                    let encoding: String.Encoding = unicode ? .utf16 : .windowsCP1252
                     if var string = String(data: pathData[..<nullRange], encoding: encoding) {
                         // UNIX-ify the path
                         string.replace("\\", with: "/")

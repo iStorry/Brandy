@@ -36,7 +36,6 @@ class WhiskyCmd {
                 appleScript.executeAndReturnError(&error)
 
                 if let error = error {
-                    print(error)
                     if let description = error["NSAppleScriptErrorMessage"] as? String {
                         await MainActor.run {
                             let alert = NSAlert()

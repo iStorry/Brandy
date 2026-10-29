@@ -18,6 +18,7 @@
 
 import SwiftUI
 import WhiskyKit
+import os
 
 enum LoadingState {
     case loading
@@ -160,7 +161,7 @@ struct ConfigView: View {
                     retinaMode = try await Wine.retinaMode(bottle: bottle)
                     retinaModeLoadingState = .success
                 } catch {
-                    print(error)
+                    Logger.wineKit.error("Bottle configuration: \(error)")
                     retinaModeLoadingState = .failed
                 }
             }
@@ -171,7 +172,7 @@ struct ConfigView: View {
                     dpiConfig = storedDPI ?? Self.defaultDPI
                 } catch {
                     // A bottle whose DPI was never changed has no registry entry
-                    print(error)
+                    Logger.wineKit.error("Bottle configuration: \(error)")
                 }
                 dpiConfigLoadingState = .success
             }
@@ -187,7 +188,7 @@ struct ConfigView: View {
                         bottle.settings.windowsVersion = newValue
                         loadBuildName()
                     } catch {
-                        print(error)
+                        Logger.wineKit.error("Bottle configuration: \(error)")
                         winVersionLoadingState = .failed
                     }
                 }
@@ -202,7 +203,7 @@ struct ConfigView: View {
                 try await Wine.changeBuildVersion(bottle: bottle, version: buildVersion)
                 buildVersionLoadingState = .success
             } catch {
-                print("Failed to change build version")
+                Logger.wineKit.error("Failed to change build version: \(error)")
                 buildVersionLoadingState = .failed
             }
         }
@@ -215,7 +216,7 @@ struct ConfigView: View {
                 try await Wine.changeRetinaMode(bottle: bottle, retinaMode: enabled)
                 retinaModeLoadingState = .success
             } catch {
-                print("Failed to change retina mode")
+                Logger.wineKit.error("Failed to change Retina mode: \(error)")
                 retinaModeLoadingState = .failed
             }
         }
@@ -229,7 +230,7 @@ struct ConfigView: View {
                 dpiConfig = dpi
                 dpiConfigLoadingState = .success
             } catch {
-                print(error)
+                Logger.wineKit.error("Bottle configuration: \(error)")
                 dpiConfigLoadingState = .failed
             }
         }
@@ -246,7 +247,7 @@ struct ConfigView: View {
 
                 buildVersionLoadingState = .success
             } catch {
-                print(error)
+                Logger.wineKit.error("Bottle configuration: \(error)")
                 buildVersionLoadingState = .failed
             }
         }
@@ -267,7 +268,7 @@ private struct WineToolRow: View {
                     do {
                         try await open()
                     } catch {
-                        print("Failed to open Wine tool: \(error)")
+                        ErrorAlert.show(String(localized: "error.openTool"), error: error)
                     }
                 }
             }

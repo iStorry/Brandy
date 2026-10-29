@@ -57,7 +57,7 @@ extension Bottle {
                 if let error = error {
                     Logger.wineKit.error("Failed to run terminal script \(error)")
                     guard let description = error["NSAppleScriptErrorMessage"] as? String else { return }
-                    await self.showRunError(message: String(describing: description))
+                    await ErrorAlert.show(String(localized: "alert.message"), message: description)
                 }
             }
         }
@@ -81,7 +81,7 @@ extension Bottle {
                     }
                 }
             } catch {
-                print(error)
+                Logger.wineKit.error("Failed to read Start Menu shortcut `\(link.lastPathComponent)`: \(error)")
             }
         }
 
@@ -120,90 +120,87 @@ extension Bottle {
         return shortcuts
     }
 
-    func updateInstalledPrograms() {
+    /// Finds the bottle's programs. The walk runs in the background: Program Files includes Steam's whole
+    /// game library, which can be thousands of folders.
+    @MainActor
+    func updateInstalledPrograms() async {
         let driveC = url.appending(path: "drive_c")
-        var programs: [Program] = []
-        var foundURLS: Set<URL> = []
+        let hidden = Set(settings.blocklist)
+        let installed = await Task.detached(priority: .userInitiated) {
+            Self.executables(in: driveC, excluding: hidden)
+        }.value
 
+        let pinnedElsewhere = settings.pins.compactMap(\.url).filter { !installed.contains($0) }
+        programs = (installed + pinnedElsewhere)
+            .map { Program(url: $0, bottle: self) }
+            .sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
+    private nonisolated static func executables(in driveC: URL, excluding hidden: Set<URL>) -> [URL] {
+        var executables: [URL] = []
         for folderName in ["Program Files", "Program Files (x86)"] {
-            let folderURL = driveC.appending(path: folderName)
             let enumerator = FileManager.default.enumerator(
-                at: folderURL, includingPropertiesForKeys: [.isExecutableKey], options: [.skipsHiddenFiles]
+                at: driveC.appending(path: folderName), includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
             )
-
-            while let url = enumerator?.nextObject() as? URL {
-                guard !url.hasDirectoryPath && url.pathExtension == "exe" else { continue }
-                guard !settings.blocklist.contains(url) else { continue }
-                foundURLS.insert(url)
-                programs.append(Program(url: url, bottle: self))
+            while let file = enumerator?.nextObject() as? URL {
+                guard file.pathExtension.lowercased() == "exe", !file.hasDirectoryPath, !hidden.contains(file)
+                else { continue }
+                executables.append(file)
             }
         }
-
-        // Add missing programs from pins
-        for pin in settings.pins {
-            guard let url = pin.url else { continue }
-            guard !foundURLS.contains(url) else { continue }
-            programs.append(Program(url: url, bottle: self))
-        }
-
-        self.programs = programs.sorted { $0.name.lowercased() < $1.name.lowercased() }
+        return executables
     }
 
     @MainActor
     func move(destination: URL) {
+        guard let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) else { return }
+        bottle.inFlight = true
         do {
-            if let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) {
-                bottle.inFlight = true
-                for index in 0..<bottle.settings.pins.count {
-                    let pin = bottle.settings.pins[index]
-                    if let url = pin.url {
-                        bottle.settings.pins[index].url = url.updateParentBottle(old: url,
-                                                                                 new: destination)
-                    }
-                }
-
-                for index in 0..<bottle.settings.blocklist.count {
-                    let blockedUrl = bottle.settings.blocklist[index]
-                    bottle.settings.blocklist[index] = blockedUrl.updateParentBottle(old: url,
-                                                                                     new: destination)
-                }
-            }
             try FileManager.default.moveItem(at: url, to: destination)
-            if let path = BottleVM.shared.bottlesList.paths.firstIndex(of: url) {
-                BottleVM.shared.bottlesList.paths[path] = destination
-            }
-            BottleVM.shared.loadBottles()
         } catch {
-            print("Failed to move bottle")
+            bottle.inFlight = false
+            ErrorAlert.show(String(localized: "error.moveBottle"), error: error)
+            return
         }
+
+        // Pins and hidden programs record absolute paths, so they follow the bottle only once it has moved
+        for index in bottle.settings.pins.indices {
+            if let pinURL = bottle.settings.pins[index].url {
+                bottle.settings.pins[index].url = pinURL.updateParentBottle(old: url, new: destination)
+            }
+        }
+        for index in bottle.settings.blocklist.indices {
+            bottle.settings.blocklist[index] = bottle.settings.blocklist[index]
+                .updateParentBottle(old: url, new: destination)
+        }
+        if let path = BottleVM.shared.bottlesList.paths.firstIndex(of: url) {
+            BottleVM.shared.bottlesList.paths[path] = destination
+        }
+        BottleVM.shared.loadBottles()
     }
 
-    func exportAsArchive(destination: URL) {
-        do {
-            try Tar.tar(folder: url, toURL: destination)
-        } catch {
-            print("Failed to export bottle")
-        }
+    func exportAsArchive(destination: URL) throws {
+        try Tar.tar(folder: url, toURL: destination)
     }
 
     @MainActor
     func remove(delete: Bool) {
-        do {
-            if let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) {
-                bottle.inFlight = true
-            }
-
-            if delete {
+        let bottle = BottleVM.shared.bottles.first(where: { $0.url == url })
+        bottle?.inFlight = true
+        if delete {
+            do {
                 try FileManager.default.removeItem(at: url)
+            } catch {
+                bottle?.inFlight = false
+                ErrorAlert.show(String(localized: "error.removeBottle"), error: error)
+                return
             }
-
-            if let path = BottleVM.shared.bottlesList.paths.firstIndex(of: url) {
-                BottleVM.shared.bottlesList.paths.remove(at: path)
-            }
-            BottleVM.shared.loadBottles()
-        } catch {
-            print("Failed to remove bottle")
         }
+
+        if let path = BottleVM.shared.bottlesList.paths.firstIndex(of: url) {
+            BottleVM.shared.bottlesList.paths.remove(at: path)
+        }
+        BottleVM.shared.loadBottles()
     }
 
     @MainActor
@@ -211,16 +208,6 @@ extension Bottle {
         settings.name = newName
     }
 
-    @MainActor private func showRunError(message: String) {
-        let alert = NSAlert()
-        alert.messageText = String(localized: "alert.message")
-        alert.informativeText = String(localized: "alert.info")
-        + " \(self.url.lastPathComponent): "
-        + message
-        alert.alertStyle = .critical
-        alert.addButton(withTitle: String(localized: "button.ok"))
-        alert.runModal()
-    }
 }
 
 extension BottleSettings {
