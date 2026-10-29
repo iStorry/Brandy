@@ -3,7 +3,7 @@ opt_in_rules:
   - file_header
 
 excluded:
-  - .build
+  - "**/.build"
 
 file_header:
     severity: error
